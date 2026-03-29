@@ -259,7 +259,8 @@ summary(
 )
 ```
 ### Baseline Text encoder
-- We aim to improve this text encoder model as taken from model summary
+- We aim to improve this text encoder model as taken from model summary, it shows the architecture and parameter distribution of the text autoencoder. From the below summary the text autoencoder was built with a `Seq2Seq` LSTM architecutr designed for capturing sequential structure and the context of the tokenized text data.
+
 ### LSTM Text Autoencoder Summary
 
 ```text
@@ -289,10 +290,9 @@ Estimated Total Size (MB): 200.79
 ============================================================================================================================================
 ```
 ### Baseline Visual encoder
-- We aim to improve this visual encoder model as taken from model summary
+- We aim to improve this visual encoder model as taken from model summary, it shows the architecture and parameter distribution of the visual autoencoder. The below CNN autoencoder uses an encoder-decoder structure to learn spatial hierachies and reconstruction of images from latent features. It is built to improve reconstruction quality over time.
 ### CNN Visual Autoencoder Summary
 
-The following summary (generated using `torchinfo`) shows the architecture and parameter distribution of the visual autoencoder:
 
 ```text
 ===== CNN Visual Autoencoder Summary =====
@@ -341,3 +341,5 @@ Params size (MB): 2.01
 Estimated Total Size (MB): 9.94
 ============================================================================================================================================
 ```
+
+### Baseline Results
