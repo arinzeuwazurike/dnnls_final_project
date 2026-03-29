@@ -37,7 +37,26 @@ The baseline model consists of the following components:
 * Sequence predictor model
 * Training, initialization and training loop
 
+```mermaid
+flowchart TD
+    A["Imported Libraries"]:::lightblue
+    B["Data Preparation"]:::lightblue
+    C["Dataset & DataLoader Creation"]:::lightblue
+    D["Text Encoding with LSTM"]:::lightgreen
+    E["Visual Encoding with CNN"]:::lightgreen
+    F["Attention Module"]:::lightgreen
+    G["Sequence Prediction Model"]:::lightorange
+    H["Training Setup & Loop"]:::lightorange
 
+    A --> B --> C
+    C --> D
+    D --> E --> F
+    F --> G
+    G --> H
+
+    classDef lightblue fill:#D0E7FF,stroke:#333,stroke-width:1px,color:#000
+    classDef lightgreen fill:#DFFFE0,stroke:#333,stroke-width:1px,color:#000
+    classDef lightorange fill:#FFF4D0,stroke:#333,stroke-width:1px,color:#000
 
 ## Baseline Setup and Minor Modifications
 
