@@ -215,26 +215,62 @@ def save_prediction_examples(model, dataloader, n_samples=5):
 ```
 - Attention heatmap Visualization
 ```python
-def plot_attention_heatmaps(model, dataloader, n_samples=3):
+def plot_attention_heatmaps(model, dataloader, device, n_samples=3):
+    """
+    - Shows n_samples individual attention maps (one per batch sample)
+    - Shows an averaged attention map across batch for general trends
+    """
     model.eval()
-    for i, batch in enumerate(dataloader):
-        if i >= n_samples:
-            break
-        frames, descriptions, image_target, text_target, *_ = batch
-        frames, descriptions = frames.to(device), descriptions.to(device)
-        
-        # If Sequence predictor outputs attention weights
-        _, _, _, attn_weights, *_ = model(frames, descriptions, text_target)
-        # attn_weights shape: [batch, seq_len, seq_len]
+    sample_count = 0
+    all_attn_maps = []
 
-        for b in range(frames.size(0)):
-            plt.figure(figsize=(6,5))
-            plt.imshow(attn_weights[b].detach().cpu().numpy(), cmap='viridis')
-            plt.title(f"Attention Heatmap - Sample {i}-{b}")
-            plt.xlabel("Input tokens/frames")
-            plt.ylabel("Output tokens/frames")
-            plt.colorbar()
-            plt.show()
+    with torch.no_grad():
+        for batch in dataloader:
+            if sample_count >= n_samples:
+                break
+
+            # Unpack batch 
+            frames, descriptions, image_target, text_target, *_ = batch
+            frames, descriptions = frames.to(device), descriptions.to(device)
+
+            # Forward pass
+            _, _, _, attn_weights, *_ = model(frames, descriptions, text_target)
+            # attn_weights shape: [batch, decoder_seq_len, encoder_seq_len]
+
+            batch_size = attn_weights.size(0)
+
+            # Plot individual attention maps ---
+            for b in range(batch_size):
+                if sample_count >= n_samples:
+                    break
+                attn_map = attn_weights[b].detach().cpu().numpy()  # [decoder_seq_len, encoder_seq_len]
+
+                plt.figure(figsize=(6,5))
+                plt.imshow(attn_map, cmap='viridis', aspect='auto')
+                plt.title(f"Attention Heatmap - Sample {sample_count}")
+                plt.xlabel("Input tokens/frames")
+                plt.ylabel("Output tokens/frames")
+                plt.colorbar()
+                plt.show()
+
+                sample_count += 1
+
+            # Collect for average heatmap
+            all_attn_maps.append(attn_weights)
+
+    #Plot averaged attention map
+    if all_attn_maps:
+        all_attn_tensor = torch.cat(all_attn_maps, dim=0)  # [total_samples, decoder_seq_len, encoder_seq_len]
+        avg_attn = all_attn_tensor.mean(dim=0)  # average over all samples
+        avg_attn_map = avg_attn.detach().cpu().numpy()
+
+        plt.figure(figsize=(6,5))
+        plt.imshow(avg_attn_map, cmap='viridis', aspect='auto')
+        plt.title(f"Average Attention Map over {len(all_attn_tensor)} Samples")
+        plt.xlabel("Input tokens/frames")
+        plt.ylabel("Output tokens/frames")
+        plt.colorbar()
+        plt.show()
 ```
 
 - Actual Figures, table and Visualization
