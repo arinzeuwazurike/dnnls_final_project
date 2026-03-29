@@ -50,30 +50,19 @@ I made some initial changes without changing the architecture :
 
 
 ```python
+def save_checkpoint(model, optimizer, epoch, loss, filename="autoencoder_checkpoint.pth"):
+    """
+    Saves the checkpoint to a local folder.
+    """
+    # Local folder 
+    local_folder = './checkpoints'
 
-def save\_checkpoint(model, optimizer, epoch, loss, filename="autoencoder\_checkpoint.pth"):
+    # Ensure the directory exists
+    os.makedirs(local_folder, exist_ok=True)
 
-&#x20;   """
-
-&#x20;   Saves the checkpoint to a local folder.
-
-&#x20;   """
-
-&#x20;   # Local folder 
-
-&#x20;   local\_folder = './checkpoints'
-
-
-
-&#x20;   # Ensure the directory exists
-
-&#x20;   os.makedirs(local\_folder, exist\_ok=True)
-
-
-
-&#x20;   # Full file path
-
-&#x20;   full\_path = os.path.join(local\_folder, filename)```
+    # Full file path
+    full_path = os.path.join(local_folder, filename)
+```
 
 
 
