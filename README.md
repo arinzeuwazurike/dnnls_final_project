@@ -398,3 +398,19 @@ Estimated Total Size (MB): 9.94
 ```
 
 ### Baseline Results
+
+| Model    | Loss       | BLEU      | Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
+|----------|-----------|-----------|--------|---------------|------------|---------------|------------|------------|
+| Baseline | 4.1011    | 0.0148    | 5      | 0.001         | 4          | 16            | 16         | 1          |
+
+### Figure
+
+#### Training Loss
+This is a graph of the loss of the baseline model against the the epoch.
+![Training Curve]("Experiment/Baseline_experiment/baseline_loss_curve.png")
+
+#### BLEU Score
+This is a chart displaying the BLEU Score
+![BLEU Score](Experiment/Baseline_experiment/baseline_bleu.png)
+
+#### Example 
