@@ -1,2 +1,0 @@
-Model,Loss,BLEU,Number of Epochs,Learning Rate,Batch Size,Embedding Dim,Latent Dim,Num Layers
-Baseline,4.101073304559015,0.014826198567009343,5,0.001,4,16,16,1
