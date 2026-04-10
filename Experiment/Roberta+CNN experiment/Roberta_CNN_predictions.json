@@ -1,0 +1,22 @@
+[
+    {
+        "ground_truth": "The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, \u201cHow did it come to this? How did the line between us and them become so blurred?\u201d As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many",
+        "prediction": "In air was the with the. the was,, the weight of the weight was, The of, the the. weight of the weight sense, the sense, the to the weight of the, The was,. the weight, the,, the,, the, the mind,, sense of the, the, The of was, the.In, the,. the was The was the weight of the, the.. and of The to the the was. the,, the was the the, was to the the sense, the. the was,, and he,"
+    },
+    {
+        "ground_truth": "In a dimly lit room, Susan clutched the cell phone tightly, her voice trembling over the line. She whispered anxiously, \"Tom, something's wrong. I can't explain it, but I feel like we're running out of time.\" The indoor setting seemed to close in around her, amplifying the sense of urgency in the air.",
+        "prediction": "In the sensely lit of, the,, the weight weight,. the mind the, the weight of The was,,, the sense, the was eyes. The was, shake,. the the, the the,. the, the, The of was, to the. the the mind the the weight of the. the weight. The was,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"
+    },
+    {
+        "ground_truth": "In the heart of a dimly lit room, the atmosphere was thick with silence and suspense. Jack stood alone, holding a cell phone tightly. The screen illuminated his face with a ghostly glow, a mix of determination and fear etched in his features. The A dimly lit room seemed to close in around him, as if the walls were alive with secrets. Jack knew he was about to make a call that could change everything. With trembling fingers, he dialled the number, unaware of the chain of events it would unleash. His heart pounded in his chest as the call connected,",
+        "prediction": "In the weight of the sensely lit of, the weight, a with the. the, The,,, the the sense of,. The of, the mind, the sense,,. the sense of the, the,, the mind and The of sensely lit of, to the. the the, the the the weight, the, the, The,, was a to the the sense, the was,. The of,, the was the of weight the the of the weight of the.. to the The mind of. the mind. the weight., the"
+    },
+    {
+        "ground_truth": "In the dimly lit indoor room, Jack stood near the door, his mind racing with thoughts of the mission ahead. Sarah and Mike stood by the wall, their expressions unreadable. The window let in a sliver of light, casting long shadows across the room. Jack knew that he had to make a decision soon. The tension was palpable as he glanced at Sarah and Mike, wondering if she and he were truly on his side.",
+        "prediction": "In the weightly lit of was, the,, the weight, the mind. with the. the weight,, The, the,, the weight, the lit, the. The of,, the sense, the the, the the of, the weight, The,, the was been the the sense,, The of, the, the was. the, the, the a the was the was the, the mind, The was,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"
+    },
+    {
+        "ground_truth": "In the Open field with bushes and trees, John stood near the brown horse, feeling a sense of determination mixed with unease. He knew that today would be a crucial day. As he tended to the horse, he could see the white horse in the distance, a symbol of the journey ahead. The calm environment seemed to mock the tension building inside him. Little did he know, the events of this day would change everything.",
+        "prediction": "In the weight of, the, the, the,, the weight,. the. sense of the,. thease, The was, the, lit the sense to. The the was, the weight, the was was, weight,. the weight, the sense of the weight,, The of was, to the the weight,, the, The did the was, the weight, the was, to,. The was,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"
+    }
+]

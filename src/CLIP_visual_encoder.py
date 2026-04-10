@@ -1,3 +1,7 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 class CLIPEncoderWrapper(nn.Module):
     def __init__(self, latent_dim, *args, **kwargs):
         super().__init__()
