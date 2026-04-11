@@ -1,2 +1,2 @@
 Model,Loss,BLEU,Number of Epochs,Learning Rate,Batch Size,Embedding Dim,Latent Dim,Num Layers
-Roberta + CNN,5.266302278846692,0.0031571979960223085,5,0.001,4,16,16,1
+Roberta + CNN,5.339231363527334,0.0022995994229821817,5,0.001,4,16,16,1
