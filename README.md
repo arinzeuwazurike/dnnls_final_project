@@ -64,154 +64,100 @@ I made some initial changes without changing the architecture :
 
 
 
-#### I changed the drive access to local
-
-
-
-```python
-def save_checkpoint(model, optimizer, epoch, loss, filename="autoencoder_checkpoint.pth"):
-    """
-    Saves the checkpoint to a local folder.
-    """
-    # Local folder 
-    local_folder = './checkpoints'
-
-    # Ensure the directory exists
-    os.makedirs(local_folder, exist_ok=True)
-
-    # Full file path
-    full_path = os.path.join(local_folder, filename)
-```
-
-
-
 #### Evaluation Pipeline and Visualization tools
-- BLEU score computation, prediction saving, score computation, loss tracking, loss curve plot, BLEU socre bar chart and prediction examples
+- Prediction saving, BLEU/ROUGE/METEOR score computation, SSIM and PSNR evaluation, text and image loss tracking, metric visualization plots (loss curves, BLEU/ROUGE/METEOR/SSIM/PSNR score bar charts) and prediction examples.
 ```python
-from nltk.translate.bleu_score import sentence_bleu
-import json
-import pandas as pd
+# Project Evaluation
+# Initialize metrics from HuggingFace evaluate
+rouge_metric = evaluate.load('rouge')
+meteor_metric = evaluate.load('meteor')
 
 def evaluate_model(model, dataloader):
     model.eval()
-    total_loss = 0
+    total_text_loss = 0
+    total_image_loss = 0
+
+    all_preds_text = []
+    all_gts_text = []
     bleu_scores = []
+    ssim_scores = []
+    psnr_scores = []
+    mse_scores = []
 
     with torch.no_grad():
-        for (frames, descriptions, image_target, text_target,
-             roi1, roi2, roi_valid, roi_frame, ent_id) in dataloader:
+        for batch in dataloader:
+            # Adjusting unpacking to match requested structure
+            # Note: The existing dataloader returns 9 items, mapping them accordingly
+            frames, image_target, roi1, roi2, roi_valid, roi_frame, ent_id, text_dict, obj_labels = batch
 
+            # Mapping to user names
+            descriptions = text_dict["input_ids"].to(device)
+            text_target = text_dict["target_ids"].to(device)
             frames = frames.to(device)
-            descriptions = descriptions.to(device)
-            text_target = text_target.to(device)
+            image_target = image_target.to(device)
 
-            _, _, predicted_text_logits_k, _, _, _, _ = model(frames, descriptions, text_target)
+            # Forward pass: Capturing all 8 return values from SequencePredictor
+            # but using the 3 arguments requested by user
+            pred_image, _, predicted_text_logits_k, _, _, _, _, attn_weights = model(
+                frames,
+                descriptions,
+                text_dict["attention_mask"].to(device),
+                text_dict["decoder_input_ids"].to(device)
+            )
 
-            # Loss
+            # Image Metrics
+            img_loss = F.mse_loss(pred_image, image_target)
+            total_image_loss += img_loss.item()
+
+            for i in range(image_target.size(0)):
+                gt_np = image_target[i].cpu().permute(1, 2, 0).numpy()
+                pred_np = pred_image[i].cpu().permute(1, 2, 0).numpy()
+
+                # SSIM
+                s = ssim(gt_np, pred_np, data_range=1.0, channel_axis=2)
+                ssim_scores.append(s)
+
+                # MSE
+                m = np.mean((gt_np - pred_np) ** 2)
+                mse_scores.append(m)
+
+                # PSNR
+                p = psnr(gt_np, pred_np, data_range=1.0)
+                psnr_scores.append(p)
+
+            # Text Metrics
             prediction_flat = predicted_text_logits_k.reshape(-1, tokenizer.vocab_size)
-            target_labels = text_target.squeeze(1)[:, 1:]
-            target_flat = target_labels.reshape(-1)
+            target_flat = text_target.reshape(-1)
+            loss_text = criterion_text(prediction_flat, target_flat)
+            total_text_loss += loss_text.item()
 
-            loss = criterion_text(prediction_flat, target_flat)
-            total_loss += loss.item()
-
-            # BLEU
             preds = torch.argmax(predicted_text_logits_k, dim=-1)
-
-            for pred, tgt in zip(preds, target_labels):
+            for pred, tgt in zip(preds, text_target):
                 pred_text = tokenizer.decode(pred, skip_special_tokens=True)
                 tgt_text = tokenizer.decode(tgt, skip_special_tokens=True)
 
+                all_preds_text.append(pred_text)
+                all_gts_text.append(tgt_text)
+
+                # BLEU
                 bleu = sentence_bleu([tgt_text.split()], pred_text.split())
                 bleu_scores.append(bleu)
 
+    # Batch-level text metrics
+    rouge_results = rouge_metric.compute(predictions=all_preds_text, references=all_gts_text)
+    meteor_results = meteor_metric.compute(predictions=all_preds_text, references=all_gts_text)
+
     return {
-        "text_loss": total_loss / len(dataloader),
-        "bleu": sum(bleu_scores) / len(bleu_scores)
+        "text_loss": total_text_loss / len(dataloader),
+        "image_reconstruction_loss": total_image_loss / len(dataloader),
+        "bleu": sum(bleu_scores) / len(bleu_scores),
+        "rougeL": rouge_results['rougeL'],
+        "meteor": meteor_results['meteor'],
+        "ssim": sum(ssim_scores) / len(ssim_scores),
+        "mse": sum(mse_scores) / len(mse_scores),
+        "psnr": sum(psnr_scores) / len(psnr_scores)
     }
 
-
-# Save predictions
-def save_predictions(model, dataloader, num_samples=5):
-    model.eval()
-    samples = []
-
-    with torch.no_grad():
-        for (frames, descriptions, image_target, text_target,
-             roi1, roi2, roi_valid, roi_frame, ent_id) in dataloader:
-
-            frames = frames.to(device)
-            descriptions = descriptions.to(device)
-            text_target = text_target.to(device)
-
-            _, _, predicted_text_logits_k, _, _, _, _ = model(frames, descriptions, text_target)
-
-            preds = torch.argmax(predicted_text_logits_k, dim=-1)
-
-            for i in range(len(preds)):
-                pred_text = tokenizer.decode(preds[i], skip_special_tokens=True)
-                tgt_text = tokenizer.decode(text_target.squeeze(1)[i][1:], skip_special_tokens=True)
-
-                samples.append({
-                    "ground_truth": tgt_text,
-                    "prediction": pred_text
-                })
-
-                if len(samples) >= num_samples:
-                    return samples
-
-
-# Plot loss
-def plot_loss_curve(losses):
-    plt.figure()
-    plt.plot(losses)
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Baseline Training Loss")
-    plt.savefig("baseline_loss_curve.png")
-    plt.close()
-
-
-# BLEU bar chart
-def plot_bleu(bleu_score):
-    plt.figure()
-    plt.bar(["Baseline"], [bleu_score])
-    plt.ylabel("BLEU Score")
-    plt.title("Baseline BLEU")
-    plt.savefig("baseline_bleu.png")
-    plt.close()
-
-# Figure 3
-def save_prediction_examples(model, dataloader, n_samples=5):
-    model.eval()
-    examples = []
-    
-    with torch.no_grad():
-        for i, batch in enumerate(dataloader):
-            if i >= n_samples:
-                break
-
-            frames, descriptions, image_target, text_target, *_ = batch
-            frames = frames.to(device)
-            descriptions = descriptions.to(device)
-            image_target = image_target.to(device)
-            text_target = text_target.to(device)
-
-            pred_image, _, pred_text_logits, *_ = model(frames, descriptions, text_target)
-            pred_text_tokens = pred_text_logits.argmax(dim=-1)
-
-            gt_text = tokenizer.decode(text_target.squeeze(1)[0][1:], skip_special_tokens=True)
-            pred_text = tokenizer.decode(pred_text_tokens[0], skip_special_tokens=True)
-
-            examples.append({
-                "input_frames": frames[0].cpu().tolist(),
-                "ground_truth_image": image_target[0].cpu().tolist(),
-                "predicted_image": pred_image[0].cpu().tolist(),
-                "ground_truth_text": gt_text,
-                "predicted_text": pred_text
-            })
-
-    return examples   
 ```
 - Attention heatmap Visualization
 ```python
@@ -270,7 +216,50 @@ def plot_attention_heatmaps(model, dataloader, device, n_samples=3):
         plt.xlabel("Input tokens/frames")
         plt.ylabel("Output tokens/frames")
         plt.colorbar()
+        plt.show(def plot_attention_heatmaps(model, dataloader, device, n_samples=3):
+    model.eval()
+    all_attn_maps = []
+    sample_idx = 0
+
+    with torch.no_grad():
+        for batch in dataloader:
+            if sample_idx >= n_samples: break
+            frames, image_target, roi1, roi2, roi_valid, roi_frame, ent_id, text_dict, obj_labels = batch
+
+            # Capturing attention weights (8th return value)
+            _, _, _, _, _, _, _, attn_weights = model(
+                frames.to(device),
+                text_dict["input_ids"].to(device),
+                text_dict["attention_mask"].to(device),
+                text_dict["decoder_input_ids"].to(device)
+            )
+
+            for b in range(attn_weights.size(0)):
+                if sample_idx >= n_samples: break
+                # Reshape for the 4 input frames visualization
+                attn_map = attn_weights[b].detach().cpu().numpy().reshape(1, -1)
+                plt.figure(figsize=(6, 2))
+                img = plt.imshow(attn_map, cmap='viridis', aspect='auto')
+                plt.title(f"Attention Map Sample {sample_idx+1}\n(Importance over 4 input frames)")
+                plt.xlabel("Input Frame Index (0-3)")
+                plt.ylabel("Attention Value")
+                cbar = plt.colorbar(img)
+                cbar.set_label('Attention Weight')
+                plt.show()
+                all_attn_maps.append(attn_weights[b])
+                sample_idx += 1
+
+    if all_attn_maps:
+        avg_attn = torch.stack(all_attn_maps).mean(dim=0).cpu().numpy().reshape(1, -1)
+        plt.figure(figsize=(6, 2))
+        img = plt.imshow(avg_attn, cmap='viridis', aspect='auto')
+        plt.title(f"Average Attention Map ({n_samples} samples)\n(Mean importance over 4 input frames)")
+        plt.xlabel("Input Frame Index (0-3)")
+        plt.ylabel("Attention Value")
+        cbar = plt.colorbar(img)
+        cbar.set_label('Attention Weight')
         plt.show()
+)
 ```
 
 - Actual Figures, table and Visualization
@@ -399,18 +388,57 @@ Estimated Total Size (MB): 9.94
 
 ### Baseline Results
 
-| Model    | Loss       | BLEU      | Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
-|----------|-----------|-----------|--------|---------------|------------|---------------|------------|------------|
-| Baseline | 4.1011    | 0.0148    | 5      | 0.001         | 4          | 16            | 16         | 1          |
-
+| Model    | Text Loss | Image Loss | BLEU    | METEOR | SSIM   | PSNR    | Number of Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
+|----------|-----------|-------------|---------|---------|--------|---------|------------------|---------------|------------|---------------|------------|------------|
+| Baseline | 4.1015    | 0.2414      | 0.0148  | 0.2432  | 0.1279 | 11.0754 | 5                | 0.001         | 4          | 16            | 16         | 1          |
 ### Figure
 
 #### Training Loss
 This is a graph of the loss of the baseline model against the the epoch.
-![Training Curve]("Experiment/Baseline_experiment/baseline_loss_curve.png")
+![Training Curve]("Experiment/Baseline_experiment/baseline_loss.png")
 
-#### BLEU Score
-This is a chart displaying the BLEU Score
-![BLEU Score](Experiment/Baseline_experiment/baseline_bleu.png)
+#### Baseline Metric Score
+This is a chart displaying the Baseline Metrics  Score
+![Baseline Metric Score](Experiment/Baseline_experiment/baseline_evaulation_metrics.png)
 
 #### Example 
+
+![Example 1]("Experiment/Baseline_experiment/example_1.png")
+
+Ground Truth:
+ the confrontation continued as anon leader stood among the soldiers. the air was thick with tension, and they tried to decipher the meaning behind the masked figure. anon leader spoke again, “ we are not your enemies. we are the voice of the people. ” the soldiers remained silent, unsure of how to respond.
+
+Prediction:
+ the tension was the the air of, in the tension, the room was a with a, and the was to the beher the tension. the tension of. the air of, with, and he need to was mind, the need to weight, the room, the he room ' a, and of the to the. in lighting lighting lighting lighting lighting lightinglllllllllllllllllllllllrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrked
+
+![Example 2]("Experiment/Baseline_experiment/example_2.png")
+
+Ground Truth:
+ back outside, sarah addressed tom with a sense of urgency. " we need to find her, " she insisted. tom nodded in agreement, his mind racing with possibilities. the potted plant stood as a silent witness to the tension between her and him. the indoor setting felt like a cage, trapping them in their fear.
+
+Prediction:
+ the in, the, the, the silent of tension, the we need to the a, but he was. the,, the, and mind racing with the. the roomted plant, near he man witness to the tension. the. the. the room room was a a sense, but him. the shoulders. the on lighting lighting lighting lighting lighting lightinglllllllllllllllllllllllllllllllllrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrked
+
+#### Attention Heatmap
+
+This is the average attention heatmap over 3 examples
+
+![Attention Heatmap]("Experiment/Baseline_experiment/attention_map_average.png")
+
+### Summary of Baseline Model Evaluation
+
+The baseline model which consists of an LSTM-based text encoder which had a pretrained auto_encoder.pth used and CNN-based image encoder which then achieved a text loss of **4.1015** and an image loss of **0.2414** after 5 training epochs( the auto_encoder.pth was already trained on 15 epochs). Evaluation was performed using both natural language generation metrics and image reconstruction quality metrics in order to assess the model’s multimodal learning capability.
+
+The model achieved a **BLEU score of 0.0148** which indicated it had a very low n-gram overlap between generated text and the ground truth captions. This suggests that the model struggled to generate syntactically and semantically accurate sequences( this can be seen in the image in the example). Similarly the **METEOR score of 0.2432** which although is slightly better due to its use of synonym and recall-based matching which still reflects weak overall language generation performance.
+
+For image quality evaluation the model obtained an **SSIM score of 0.1279** which indicated poor structural similarity between generated and target image representations. The **PSNR score of 11.0754 dB** also suggests low image reconstruction quality with significant noise and distortion present in the generated outputs. PSNR is mathematically derived from Mean Squared Error (MSE) where lower MSE values correspond to higher PSNR values. Therefore, PSNR was used as a more interpretable representation of reconstruction fidelity instead of reporting MSE separately.
+
+The generated text examples further demonstrate the limitations of the baseline model. While the model occasionally captured isolated contextual words such as *tension*, *room*, and *mind racing*, the generated sentences quickly deteriorated into repetitive and incoherent outputs containing duplicated words and corrupted token sequences. This behaviour indicates difficulties in long-range sequence modelling, semantic consistency, and stable decoding.
+
+The attention heatmap visualization also reveals limitations in the baseline attention mechanism. Rather than producing interpretable frame-level temporal attention distributions, the baseline model generated a broader 64-dimensional attention representation with noisy activation patterns and several dominant peaks across latent dimensions. This suggests that the model was learning feature-level activation emphasis rather than meaningful temporal attention across the four input frames. The presence of unstable and highly varied activations indicates weak multimodal alignment and limited interpretability of the learned attention behaviour.
+
+Overall, the baseline model demonstrates limited capability in both textual generation and image representation learning. The low BLEU, SSIM and PSNR scores combined with incoherent predictions and noisy attention distributions has highlighted the need for architectural improvements to better capture multimodal relationships in the story reasoning dataset and temporal dependencies, and semantic consistency.
+
+
+
+
