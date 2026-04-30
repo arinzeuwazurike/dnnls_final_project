@@ -395,7 +395,7 @@ Estimated Total Size (MB): 9.94
 
 #### Training Loss
 This is a graph of the loss of the baseline model against the the epoch.
-![Training Curve]("Experiment/Baseline_experiment/baseline_loss.png")
+![Training Curve](Experiment/Baseline_experiment/baseline_loss.png)
 
 #### Baseline Metric Score
 This is a chart displaying the Baseline Metrics  Score
@@ -403,7 +403,7 @@ This is a chart displaying the Baseline Metrics  Score
 
 #### Example 
 
-![Example 1]("Experiment/Baseline_experiment/example_1.png")
+![Example 1](Experiment/Baseline_experiment/example_1.png)
 
 Ground Truth:
  the confrontation continued as anon leader stood among the soldiers. the air was thick with tension, and they tried to decipher the meaning behind the masked figure. anon leader spoke again, “ we are not your enemies. we are the voice of the people. ” the soldiers remained silent, unsure of how to respond.
@@ -411,7 +411,7 @@ Ground Truth:
 Prediction:
  the tension was the the air of, in the tension, the room was a with a, and the was to the beher the tension. the tension of. the air of, with, and he need to was mind, the need to weight, the room, the he room ' a, and of the to the. in lighting lighting lighting lighting lighting lightinglllllllllllllllllllllllrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrked
 
-![Example 2]("Experiment/Baseline_experiment/example_2.png")
+![Example 2](Experiment/Baseline_experiment/example_2.png)
 
 Ground Truth:
  back outside, sarah addressed tom with a sense of urgency. " we need to find her, " she insisted. tom nodded in agreement, his mind racing with possibilities. the potted plant stood as a silent witness to the tension between her and him. the indoor setting felt like a cage, trapping them in their fear.
