@@ -423,7 +423,7 @@ Prediction:
 
 This is the average attention heatmap over 3 examples
 
-![Attention Heatmap]("Experiment/Baseline_experiment/attention_map_average.png")
+![Attention Heatmap](Experiment/Baseline_experiment/attention_map_average.png)
 
 ### Summary of Baseline Model Evaluation
 
