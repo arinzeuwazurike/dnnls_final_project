@@ -1,3 +1,4 @@
+# @title Training loop for the sequence predictor
 """
 The main training loop:
 1. Iterates over epochs and batches.
@@ -19,7 +20,7 @@ LAMBDA_REID = 0.10            # pulls same-entity ROIs together (student idea)
 LAMBDA_GROUND_MSE = 0.10      # Option 2: frame-aware ROI↔text MSE grounding
 LAMBDA_CONTRAST = 0.10        # Option 1: contrastive ROI↔text grounding (InfoNCE)
 LAMBDA_ENTITY_POOL = 0.05     # Option 3: within-batch entity pooling loss
-
+sequence_predictor.to(device)
 # Modified
 # BEFORE training loop Freeze CLIP
 for p in sequence_predictor.image_encoder.clip.parameters():
@@ -30,6 +31,22 @@ for p in sequence_predictor.image_decoder.parameters():
 
 sequence_predictor.train()
 losses = []
+
+
+# Define the checkpoint path
+checkpoint_dir = '/content/drive/MyDrive/DL_Checkpoints' #Google Drive path
+os.makedirs(checkpoint_dir, exist_ok=True)
+checkpoint_filename = os.path.join(checkpoint_dir, 'roberta_clip_checkpoint.pth')
+
+# Load previous checkpoint if available
+start_epoch = 0
+if os.path.exists(checkpoint_filename):
+    print(f"Loading checkpoint from {checkpoint_filename}")
+    sequence_predictor, optimizer, loaded_epoch, _ = load_checkpoint_from_drive(sequence_predictor, optimizer, filename='roberta_clip_checkpoint.pth')
+    start_epoch = loaded_epoch + 1
+    print(f"Resuming training from epoch {start_epoch}")
+
+
 
 for epoch in range(N_EPOCHS):
     if epoch == 2:
@@ -174,11 +191,12 @@ for epoch in range(N_EPOCHS):
     validation(sequence_predictor, val_dataloader)
     sequence_predictor.train()
 
-    # Optional: Scheduler or Early stopping
-    # if USE_SCHEDULER and scheduler is not None:
-    #     scheduler.step(val_loss)
-    # if USE_EARLY_STOPPING:
-    #     stop = early_stopper.step(val_loss)
-    #     if stop:
-    #         break
+    # Save checkpoint after each epoch
+    save_checkpoint_to_drive(sequence_predictor, optimizer, epoch, epoch_loss, filename='roberta_clip_checkpoint.pth') #
 
+    # Early stopping
+    #from src.final_training import USE_EARLY_STOPPING
+    #if USE_EARLY_STOPPING:
+         #stop = early_stopper.step(epoch_loss)
+         #if stop:
+             #break

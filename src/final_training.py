@@ -1,12 +1,12 @@
 import torch
 #upgraded parameters
-N_EPOCHS = 5
-emb_dim = 16
-latent_dim = 16
+N_EPOCHS = 40
+emb_dim = 64
+latent_dim = 64
 num_layers = 1
 lr = 0.001
 max_seq_len = 120
-batch_size = 4
+batch_size = 32
 dropout = 0.1
 
 best_val_loss = float('inf')

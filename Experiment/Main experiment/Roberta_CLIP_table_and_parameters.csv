@@ -1,2 +1,0 @@
-Model,Loss,BLEU,Number of Epochs,Learning Rate,Batch Size,Embedding Dim,Latent Dim,Num Layers
-Roberta + CLIP,5.227057873063786,0.008536583779321328,5,0.001,4,16,16,1

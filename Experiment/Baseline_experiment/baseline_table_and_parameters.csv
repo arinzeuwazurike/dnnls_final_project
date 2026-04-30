@@ -1,2 +1,2 @@
-Model,Loss,BLEU,Number of Epochs,Learning Rate,Batch Size,Embedding Dim,Latent Dim,Num Layers
-Baseline,4.1011274225392915,0.014830310844505866,5,0.001,4,16,16,1
+Model,Text_Loss,Image_Loss,BLEU,METEOR,SSIM,PSNR,Number of Epochs,Learning Rate,Batch Size,Embedding Dim,Latent Dim,Num Layers
+Baseline,4.101497127751636,0.24135433621467298,0.014808649407056876,0.24324099331472424,0.12794047594070435,11.07541323779635,5,0.001,4,16,16,1

@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import RobertaModel
-#Modified
+
 class RobertaEncoder(nn.Module):
-    def __init__(self, hidden_dim, num_layers=1, dropout=0.1, unfreeze_layers=4):
+    def __init__(self, hidden_dim, num_layers=num_layers, dropout=dropout, unfreeze_layers=4):
         super().__init__()
 
         self.roberta = RobertaModel.from_pretrained("roberta-base")
@@ -95,7 +94,7 @@ class DecoderLSTM(nn.Module):
     """
       Decodes a latent space representation into a sequence of tokens.
     """
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers=1, dropout=0.1):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers=num_layers, dropout=dropout):
         super().__init__()
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
