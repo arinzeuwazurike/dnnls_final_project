@@ -399,7 +399,7 @@ This is a graph of the loss of the baseline model against the the epoch.
 
 #### Baseline Metric Score
 This is a chart displaying the Baseline Metrics  Score
-![Baseline Metric Score](Experiment/Baseline_experiment/baseline_evaulation_metrics.png)
+![Baseline Metric Score](Experiment/Baseline_experiment/baseline_evaulation_matrics.png)
 
 #### Example 
 
