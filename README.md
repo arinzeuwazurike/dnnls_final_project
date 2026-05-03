@@ -395,15 +395,15 @@ Estimated Total Size (MB): 9.94
 
 #### Training Loss
 This is a graph of the loss of the baseline model against the the epoch.
-![Training Curve]("Experiment/Baseline_experiment/baseline_loss.png")
+![Training Curve](Experiment/Baseline_experiment/baseline_loss.png)
 
 #### Baseline Metric Score
 This is a chart displaying the Baseline Metrics  Score
-![Baseline Metric Score](Experiment/Baseline_experiment/baseline_evaulation_metrics.png)
+![Baseline Metric Score](Experiment/Baseline_experiment/baseline_evaulation_matrics.png)
 
 #### Example 
 
-![Example 1]("Experiment/Baseline_experiment/example_1.png")
+![Example 1](Experiment/Baseline_experiment/example_1.png)
 
 Ground Truth:
  the confrontation continued as anon leader stood among the soldiers. the air was thick with tension, and they tried to decipher the meaning behind the masked figure. anon leader spoke again, “ we are not your enemies. we are the voice of the people. ” the soldiers remained silent, unsure of how to respond.
@@ -411,7 +411,7 @@ Ground Truth:
 Prediction:
  the tension was the the air of, in the tension, the room was a with a, and the was to the beher the tension. the tension of. the air of, with, and he need to was mind, the need to weight, the room, the he room ' a, and of the to the. in lighting lighting lighting lighting lighting lightinglllllllllllllllllllllllrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrked
 
-![Example 2]("Experiment/Baseline_experiment/example_2.png")
+![Example 2](Experiment/Baseline_experiment/example_2.png)
 
 Ground Truth:
  back outside, sarah addressed tom with a sense of urgency. " we need to find her, " she insisted. tom nodded in agreement, his mind racing with possibilities. the potted plant stood as a silent witness to the tension between her and him. the indoor setting felt like a cage, trapping them in their fear.
@@ -423,7 +423,7 @@ Prediction:
 
 This is the average attention heatmap over 3 examples
 
-![Attention Heatmap]("Experiment/Baseline_experiment/attention_map_average.png")
+![Attention Heatmap](Experiment/Baseline_experiment/attention_map_average.png)
 
 ### Summary of Baseline Model Evaluation
 
@@ -438,6 +438,194 @@ The generated text examples further demonstrate the limitations of the baseline 
 The attention heatmap visualization also reveals limitations in the baseline attention mechanism. Rather than producing interpretable frame-level temporal attention distributions, the baseline model generated a broader 64-dimensional attention representation with noisy activation patterns and several dominant peaks across latent dimensions. This suggests that the model was learning feature-level activation emphasis rather than meaningful temporal attention across the four input frames. The presence of unstable and highly varied activations indicates weak multimodal alignment and limited interpretability of the learned attention behaviour.
 
 Overall, the baseline model demonstrates limited capability in both textual generation and image representation learning. The low BLEU, SSIM and PSNR scores combined with incoherent predictions and noisy attention distributions has highlighted the need for architectural improvements to better capture multimodal relationships in the story reasoning dataset and temporal dependencies, and semantic consistency.
+
+
+# LSTM + CLIP Model
+
+In this experiment, the original CNN-based visual encoder used in the baseline model is replaced with a pretrained CLIP visual encoder. The primary goal of this modification is to improve the quality of the learned visual representations and enhance image reconstruction performance, particularly in terms of SSIM and PSNR metrics.
+
+The baseline model utilised a lightweight custom CNN to encode image frames into latent representations. Although computationally efficient, the CNN was trained from limited data and therefore had limited capability in extracting rich semantic visual features. This was reflected in the relatively low SSIM and PSNR scores obtained during baseline evaluation.
+
+To address this limitation, the CNN encoder was replaced with the vision component of the pretrained CLIP (Contrastive Language–Image Pretraining) model, specifically:
+
+- `openai/clip-vit-base-patch32`
+
+CLIP is a large-scale multimodal model developed by OpenAI and trained on millions of image-text pairs using contrastive learning. Unlike traditional CNN encoders trained solely for image classification, CLIP learns semantically meaningful visual representations that align images with natural language descriptions in a shared embedding space. This enables the model to capture higher-level contextual and semantic information from images.
+
+In the modified architecture, the CLIP vision encoder is used as a pretrained feature extractor. Input frames are resized to `224 × 224`, normalized using CLIP preprocessing statistics, and passed through the CLIP Vision Transformer (ViT) backbone to obtain high-dimensional visual embeddings. These embeddings are then projected into the same latent dimension used by the baseline model in order to maintain compatibility with the existing LSTM decoder and multimodal fusion pipeline.
+
+To improve training stability, a staged training strategy was also introduced. During the first **2 epochs**, the image decoder was frozen while the remaining components adapted to the pretrained CLIP representations. After this warm-up phase, the image decoder was unfrozen and jointly trained for the remaining **3 epochs**. This gradual unfreezing approach helped stabilise optimisation and allowed the decoder to better adapt to the richer semantic features extracted by CLIP.
+
+In addition, the multimodal loss function was rebalanced to reduce text dominance during optimisation. In the baseline setup, the text generation loss contributed more strongly to the total optimisation objective, which could bias training toward textual performance at the expense of image reconstruction quality. To address this, the image reconstruction loss was given a higher weighting while the text loss contribution was reduced:
+
+```python
+# Total loss (base + optional improvements)
+W_IM = 3.0
+W_CTX = 1.0
+W_TXT = 0.7  # reduced to minimise text dominance
+
+loss = W_IM * loss_im + W_CTX * loss_context + W_TXT * loss_text
+```
+
+To ensure a fair comparison with the baseline architecture, all other hyperparameters and training settings were kept unchanged, including:
+- LSTM text decoder,
+- pretrained checkpoint initialisation,
+- latent dimension,
+- embedding dimension,
+- batch size,
+- learning rate,
+- and number of training epochs.
+
+This experiment therefore isolates the effect of replacing the handcrafted CNN visual encoder with a large-scale pretrained multimodal visual representation model, while also introducing staged decoder training and balanced multimodal loss optimisation to improve visual reconstruction performance.
+### CLIP MODEL 
+```python
+class CLIPEncoderWrapper(nn.Module):
+    def __init__(self, latent_dim, *args, **kwargs):
+        super().__init__()
+
+        self.clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+
+        for p in self.clip.parameters():
+            p.requires_grad = False
+
+        hidden_dim = self.clip.config.vision_config.hidden_size
+        self.projection = nn.Linear(hidden_dim, latent_dim)
+
+    def forward(self, x):
+        x = nn.functional.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
+
+        mean = torch.tensor([0.481, 0.457, 0.408], device=x.device).view(1,3,1,1)
+        std  = torch.tensor([0.268, 0.261, 0.275], device=x.device).view(1,3,1,1)
+        x = (x - mean) / std
+
+        outputs = self.clip.vision_model(pixel_values=x)
+        features = outputs.pooler_output
+
+        features = features / features.norm(dim=-1, keepdim=True)
+
+        z = self.projection(features)
+        return z
+class VisualDecoder(nn.Module):
+    """
+      Decodes a latent representation into a content image and a context image
+    """
+    def __init__(self, latent_dim=16, output_w = 8, output_h = 16):
+        super(VisualDecoder, self).__init__()
+        self.imh = 60
+        self.imw = 125
+        self.flatten_dim = 64 * output_w * output_h
+        self.output_w = output_w
+        self.output_h = output_h
+
+        self.fc1 = nn.Linear(latent_dim, self.flatten_dim)
+
+        self.decoder_conv = nn.Sequential(
+          nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=(1,1)),
+          nn.GroupNorm(8, 32),
+          nn.LeakyReLU(0.1),
+
+          nn.ConvTranspose2d(32, 16, kernel_size=5, stride=2, padding=2, output_padding=1),
+          nn.GroupNorm(8, 16),
+          nn.LeakyReLU(0.1),
+
+          nn.ConvTranspose2d(16, 3, kernel_size=7, stride=2, padding=3, output_padding=(1, 1)),
+          nn.Sigmoid() # Use nn.Tanh() if your data is normalized to [-1, 1]
+      )
+
+    def forward(self, z):
+      x = self.fc1(z)
+
+      x_content = self.decode_image(x)
+      x_context = self.decode_image(x)
+
+      return x_content, x_context
+
+    def decode_image(self, x):
+      x = x.view(-1, 64, self.output_w, self.output_h)      # reshape to conv feature map
+      x = self.decoder_conv(x)
+      x = x[:, :, :self.imh, :self.imw]          # crop to original size if needed
+      return x
+
+class VisualAutoencoder( nn.Module):
+    def __init__(self, latent_dim=16, output_w = 8, output_h = 16):
+        super(VisualAutoencoder, self).__init__()
+        self.encoder = CLIPEncoderWrapper(latent_dim, output_w, output_h)
+        self.decoder = VisualDecoder(latent_dim, output_w, output_h)
+
+    def forward(self, x):
+        z = self.encoder(x)
+        x_hat = self.decoder(z)
+        return x_hat
+
+```
+### CLIP Visual encoder
+- We aim to improve this visual encoder model as taken from model summary, it shows the architecture and parameter distribution of the visual autoencoder. The below CNN autoencoder uses an encoder-decoder structure to learn spatial hierachies and reconstruction of images from latent features. It is built to improve reconstruction quality over time.
+### CLIP Visual Autoencoder Summary
+
+
+```text
+===== CLIP Visual Autoencoder Summary =====
+
+==========================================================================================================================================================================
+Layer (type:depth-idx)                                                 Input Shape               Output Shape              Param #                   Trainable
+==========================================================================================================================================================================
+VisualAutoencoder                                                      [4, 3, 64, 64]            [4, 3, 60, 125]           --                        Partial
+├─CLIPEncoderWrapper: 1-1                                              [4, 3, 64, 64]            [4, 16]                   --                        Partial
+│    └─CLIPModel: 2-1                                                  --                        --                        63,821,313                False
+│    │    └─CLIPVisionTransformer: 3-1                                 --                        [4, 768]                  (87,456,000)              False
+│    └─Linear: 2-2                                                     [4, 768]                  [4, 16]                   12,304                    True
+├─VisualDecoder: 1-2                                                   [4, 16]                   [4, 3, 60, 125]           --                        True
+│    └─Linear: 2-3                                                     [4, 16]                   [4, 8192]                 139,264                   True
+│    └─Sequential: 2-4                                                 [4, 64, 8, 16]            [4, 3, 64, 128]           --                        True
+│    │    └─ConvTranspose2d: 3-2                                       [4, 64, 8, 16]            [4, 32, 16, 32]           18,464                    True
+│    │    └─GroupNorm: 3-3                                             [4, 32, 16, 32]           [4, 32, 16, 32]           64                        True
+│    │    └─LeakyReLU: 3-4                                             [4, 32, 16, 32]           [4, 32, 16, 32]           --                        --
+│    │    └─ConvTranspose2d: 3-5                                       [4, 32, 16, 32]           [4, 16, 32, 64]           12,816                    True
+│    │    └─GroupNorm: 3-6                                             [4, 16, 32, 64]           [4, 16, 32, 64]           32                        True
+│    │    └─LeakyReLU: 3-7                                             [4, 16, 32, 64]           [4, 16, 32, 64]           --                        --
+│    │    └─ConvTranspose2d: 3-8                                       [4, 16, 32, 64]           [4, 3, 64, 128]           2,355                     True
+│    │    └─Sigmoid: 3-9                                               [4, 3, 64, 128]           [4, 3, 64, 128]           --                        --
+│    └─Sequential: 2-5                                                 [4, 64, 8, 16]            [4, 3, 64, 128]           (recursive)               True
+│    │    └─ConvTranspose2d: 3-10                                      [4, 64, 8, 16]            [4, 32, 16, 32]           (recursive)               True
+│    │    └─GroupNorm: 3-11                                            [4, 32, 16, 32]           [4, 32, 16, 32]           (recursive)               True
+│    │    └─LeakyReLU: 3-12                                            [4, 32, 16, 32]           [4, 32, 16, 32]           --                        --
+│    │    └─ConvTranspose2d: 3-13                                      [4, 32, 16, 32]           [4, 16, 32, 64]           (recursive)               True
+│    │    └─GroupNorm: 3-14                                            [4, 16, 32, 64]           [4, 16, 32, 64]           (recursive)               True
+│    │    └─LeakyReLU: 3-15                                            [4, 16, 32, 64]           [4, 16, 32, 64]           --                        --
+│    │    └─ConvTranspose2d: 3-16                                      [4, 16, 32, 64]           [4, 3, 64, 128]           (recursive)               True
+│    │    └─Sigmoid: 3-17                                              [4, 3, 64, 128]           [4, 3, 64, 128]           --                        --
+==========================================================================================================================================================================
+Total params: 151,462,612
+Trainable params: 185,299
+Non-trainable params: 151,277,313
+Total mult-adds (Units.GIGABYTES): 1.24
+==========================================================================================================================================================================
+Input size (MB): 0.20
+Forward/backward pass size (MB): 173.09
+Params size (MB): 350.56
+Estimated Total Size (MB): 523.85
+==========================================================================================================================================================================
+
+```
+
+### LSTM + CLIP Results
+
+| Model      | Text Loss   | Image Loss  | BLEU      | ROUGE-L   | METEOR    | SSIM      | PSNR      | Number of Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
+|------------|------------|------------|-----------|-----------|-----------|-----------|-----------|------------------|--------------|------------|---------------|------------|------------|
+| LSTM+CLIP  | 4.173895611 | 0.078963423 | 0.011708803 | 0.274862192 | 0.244985779 | 0.12276778 | 11.07707989 | 5 | 0.001 | 4 | 16 | 16 | 1 |
+
+### Figure
+
+#### Training loss
+
+![LSTM + CLIP Training loss](Experiment/LSTM+CLIP experiment/lstm+clip_loss.png)
+
+#### LSTM + CLIP Metric Score
+
+![LSTM + CLIP Metric Score](Experiment/LSTM+CLIP experiment/lstm_clip_evaluation_metrics.png)
+
+
+
 
 
 
