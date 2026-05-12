@@ -1,0 +1,19 @@
+# Requirements
+
+This project was developed and tested using:
+
+- **Python 3.11** or **Python 3.12**
+- PyTorch with CUDA support recommended for GPU acceleration
+
+## Install Dependencies
+
+pip install torch torchvision torchaudio
+pip install transformers
+pip install git+https://github.com/openai/CLIP.git
+pip install matplotlib numpy pandas seaborn
+pip install scikit-image
+pip install nltk
+pip install evaluate
+pip install beautifulsoup4
+pip install torchinfo
+pip install datasets
