@@ -293,3 +293,229 @@ def show_full_example(example):
 for idx, example in enumerate(examples[:3]): # the first 3
     print(f"\n=== Example {idx+1} ===")
     show_full_example(example)
+
+
+def plot_reconstruction_error_maps(model, dataloader, device, n_samples=3):
+    model.eval()
+    shown = 0
+    with torch.no_grad():
+        for batch in dataloader:
+            frames, image_target, roi1, roi2, roi_valid, roi_frame, ent_id, text_dict, obj_labels = batch
+            frames = frames.to(device)
+            image_target = image_target.to(device)
+
+            pred_image, *_ = model(
+                frames,
+                text_dict["input_ids"].to(device),
+                text_dict["attention_mask"].to(device),
+                text_dict["decoder_input_ids"].to(device)
+            )
+
+            # Resize target to match model output resolution (224x224)
+            image_target_resized = F.interpolate(
+                image_target,
+                size=(224, 224),
+                mode='bilinear',
+                align_corners=False
+            )
+
+            for i in range(frames.size(0)):
+                if shown >= n_samples: return
+                gt = image_target_resized[i].detach().cpu().permute(1,2,0).numpy()
+                pred = pred_image[i].detach().cpu().permute(1,2,0).numpy()
+                error_map = np.abs(gt - pred)
+
+                fig, ax = plt.subplots(1, 3, figsize=(12,4))
+                ax[0].imshow(gt); ax[0].set_title("Ground Truth"); ax[0].axis("off")
+                ax[1].imshow(pred); ax[1].set_title("Prediction"); ax[1].axis("off")
+                im = ax[2].imshow(error_map.mean(axis=2), cmap="hot")
+                ax[2].set_title("Reconstruction Error Map"); ax[2].axis("off")
+                plt.colorbar(im, ax=ax[2])
+                plt.tight_layout(); plt.show()
+                shown += 1
+
+feature_maps = {}
+def save_feature_maps(name):
+    def hook(module, input, output):
+        feature_maps[name] = output.detach().cpu()
+    return hook
+
+
+
+def plot_cross_modal_alignment(model, dataloader, device):
+    model.eval()
+    with torch.no_grad():
+        batch = next(iter(dataloader))
+        frames, _, _, _, _, _, _, text_dict, _ = batch
+        pred_img, _, _, _, _, z_v_seq, z_t_seq, _ = model(
+            frames.to(device),
+            text_dict["input_ids"].to(device),
+            text_dict["attention_mask"].to(device),
+            text_dict["decoder_input_ids"].to(device)
+        )
+        z_img = F.normalize(z_v_seq.view(z_v_seq.size(0), -1), dim=-1)
+        z_txt = F.normalize(z_t_seq, dim=-1)
+        sim_matrix = torch.matmul(z_img, z_txt.T).cpu().numpy()
+        plt.figure(figsize=(8,6))
+        sns.heatmap(sim_matrix, annot=False, cmap="coolwarm")
+        plt.title("Cross-Modal Alignment (Batch Image -- Text Similarity)")
+        plt.xlabel("Text Embeddings Index"); plt.ylabel("Image Sequence Embeddings Index")
+        plt.show()
+
+
+def plot_feature_maps(
+    model,
+    dataloader,
+    device,
+    layer_id=11,
+    head=None,
+    alpha=0.6
+):
+    model.eval()
+
+    # =====================================================
+    # Get one batch
+    # =====================================================
+    batch = next(iter(dataloader))
+    frames, *_ = batch
+
+    # First image from first sequence
+    image = frames[0, 0].to(device)  # [3, H, W]
+
+    # Save original for visualization
+    original_image = image.permute(1, 2, 0).cpu().numpy()
+
+    # =====================================================
+    # Resize to CLIP resolution
+    # =====================================================
+    image_resized = F.interpolate(
+        image.unsqueeze(0),
+        size=(224, 224),
+        mode="bilinear",
+        align_corners=False
+    )
+
+    # =====================================================
+    # CLIP normalization
+    # =====================================================
+    mean = torch.tensor(
+        [0.48145466, 0.4578275, 0.40821073],
+        device=device
+    ).view(1, 3, 1, 1)
+
+    std = torch.tensor(
+        [0.26862954, 0.26130258, 0.27577711],
+        device=device
+    ).view(1, 3, 1, 1)
+
+    image_input = (image_resized - mean) / std
+
+    # =====================================================
+    # Forward through CLIP Vision Encoder
+    # =====================================================
+    with torch.no_grad():
+
+        vision_outputs = model.image_encoder.clip.vision_model(
+            pixel_values=image_input,
+            output_attentions=True,
+            return_dict=True
+        )
+
+    # =====================================================
+    # Get attentions
+    # =====================================================
+    attentions = vision_outputs.attentions[layer_id]
+
+    # Shape:
+    # [B, Heads, Tokens, Tokens]
+
+    # Remove batch
+    attentions = attentions[0]
+
+    # =====================================================
+    # Select head or average heads
+    # =====================================================
+    if head is None:
+        attn_map = attentions.mean(dim=0)
+        title_head = "Average Heads"
+    else:
+        attn_map = attentions[head]
+        title_head = f"Head {head}"
+
+    # =====================================================
+    # CLS token attention to patches
+    # =====================================================
+    cls_attention = attn_map[0, 1:]
+
+    # ViT-B patches
+    num_patches = int(np.sqrt(cls_attention.shape[0]))
+
+    heatmap = cls_attention.reshape(num_patches, num_patches)
+
+    # =====================================================
+    # Upsample heatmap
+    # =====================================================
+    heatmap = F.interpolate(
+        heatmap.unsqueeze(0).unsqueeze(0),
+        size=(224, 224),
+        mode="bilinear",
+        align_corners=False
+    )[0, 0]
+
+    heatmap = heatmap.cpu().numpy()
+
+    # Normalize
+    heatmap = (heatmap - heatmap.min()) / (
+        heatmap.max() - heatmap.min() + 1e-8
+    )
+
+    # =====================================================
+    # Resize original image for overlay
+    # =====================================================
+    original_tensor = image.unsqueeze(0)
+
+    original_resized = F.interpolate(
+        original_tensor,
+        size=(224, 224),
+        mode="bilinear",
+        align_corners=False
+    )[0]
+
+    original_resized = original_resized.permute(
+        1, 2, 0
+    ).cpu().numpy()
+
+    original_resized = np.clip(original_resized, 0, 1)
+
+    # =====================================================
+    # Plot
+    # =====================================================
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Original
+    axes[0].imshow(original_resized)
+    axes[0].set_title("Input Image")
+    axes[0].axis("off")
+
+    # Heatmap
+    axes[1].imshow(heatmap, cmap="jet")
+    axes[1].set_title(
+        f"CLIP Attention Heatmap\nLayer {layer_id} | {title_head}"
+    )
+    axes[1].axis("off")
+
+    # Overlay
+    axes[2].imshow(original_resized)
+    axes[2].imshow(
+        heatmap,
+        cmap="jet",
+        alpha=alpha
+    )
+
+    axes[2].set_title("Attention Overlay")
+    axes[2].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+

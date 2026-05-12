@@ -10,35 +10,7 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="\Experiment\LSTM+CLIP experiment\lstm+CLIP_table_and_parameters.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\Experiment\Roberta + CLIP FNL 2 experiment\Roberta+CLIP_FIN_2_table_and_parameters.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\Experiment\Roberta + CLIP FNL experiment\Roberta+CLIP_FIN_table_and_parameters.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\Experiment\Roberta + CLIP INI experiment\Roberta+CLIP_table_and_parameters.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\Experiment\Roberta+CNN experiment\Roberta+CNN_table_and_parameters.csv">
+        <entry key="\Experiment\Roberta_CNN_experiment\Roberta+CNN_table_and_parameters.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

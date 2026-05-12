@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# @title The text autoencoder (Seq2Seq)
+#Modified
 class RobertaEncoder(nn.Module):
-    def __init__(self, hidden_dim, num_layers=num_layers, dropout=dropout, unfreeze_layers=4):
+    def __init__(self, hidden_dim, num_layers=num_layers, dropout=dropout, unfreeze_layers=6):
         super().__init__()
 
         self.roberta = RobertaModel.from_pretrained("roberta-base")
@@ -64,13 +66,13 @@ class RobertaEncoder(nn.Module):
             attn_scores = attn_scores.masked_fill(mask == 0, -1e9)
 
         attn_weights = torch.softmax(attn_scores, dim=1)
-        pooled_attn = torch.sum(attn_weights * last_hidden, dim=1)  # (B, 768)
+        pooled = torch.sum(attn_weights * last_hidden, dim=1)  # (B, 768)
 
         # =========================
         # CLS Token Fusion
         # =========================
         cls_token = last_hidden[:, 0]  # (B, 768)
-        pooled = 0.7 * pooled_attn + 0.3 * cls_token
+        pooled = 0.7 * pooled + 0.3 * cls_token
 
         # =========================
         # Projection
@@ -84,12 +86,12 @@ class RobertaEncoder(nn.Module):
         # =========================
         # LSTM-compatible output
         # =========================
-        hidden = latent.unsqueeze(0)  # (1, B, hidden_dim)
+        hidden = latent.unsqueeze(0).repeat(2, 1, 1) # Match 2-layer LSTM
         cell = torch.zeros_like(hidden)
 
-        return None, hidden, cell
+        return latent, hidden, cell # Changed to return latent as the first output
 
-
+#Modified to have two layers and weight tying
 class DecoderLSTM(nn.Module):
     """
       Decodes a latent space representation into a sequence of tokens.
@@ -104,11 +106,22 @@ class DecoderLSTM(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers,
                             batch_first=True, dropout=dropout if num_layers > 1 else 0)
+        # Added a small MLP head for better word prediction stability
+        self.head = nn.Sequential(
+            nn.Linear(hidden_dim, embedding_dim),
+            nn.GELU(),
+            nn.LayerNorm(embedding_dim)
+        )
+
         self.out = nn.Linear(hidden_dim, vocab_size) # Should be hidden_dim
+
+        # Weight Tying: Share weights between embedding and output linear layer
+        self.out.weight = self.embedding.weight
 
     def forward(self, input_seq, hidden, cell):
         embedded = self.embedding(input_seq)
         output, (hidden, cell) = self.lstm(embedded, (hidden, cell))
+        output = self.head(output)
         prediction = self.out(output)
         return prediction, hidden, cell
 #Modified
@@ -126,6 +139,8 @@ class Seq2SeqLSTM(nn.Module):
             attention_mask=attention_mask
         )
 
-        decoder_input = target_seq[:, :-1]
+        # The target_seq argument (decoder_input_ids from dataset) is already input_ids[:-1].
+        # No further slicing is needed here.
+        decoder_input = target_seq
         predictions, _hidden, _cell = self.decoder(decoder_input, hidden, cell)
         return predictions
