@@ -128,86 +128,10 @@ summary(
 ### Baseline Text encoder
 - We aim to improve this text encoder model as taken from model summary, it shows the architecture and parameter distribution of the text autoencoder. From the below summary the text autoencoder was built with a `Seq2Seq` LSTM architecutr designed for capturing sequential structure and the context of the tokenized text data.
 
-### LSTM Text Autoencoder Summary
-
-```text
-===== LSTM Text Autoencoder Summary =====
-
-============================================================================================================================================
-Layer (type:depth-idx)                   Input Shape               Output Shape              Param #                   Trainable
-============================================================================================================================================
-Seq2SeqLSTM                              [4, 200]                  [4, 199, 30522]           --                        False
-├─EncoderLSTM: 1-1                       [4, 200]                  [4, 200, 16]              --                        False
-│    └─Embedding: 2-1                    [4, 200]                  [4, 200, 16]              (488,352)                 False
-│    └─LSTM: 2-2                         [4, 200, 16]              [4, 200, 16]              (2,176)                   False
-├─DecoderLSTM: 1-2                       [4, 199]                  [4, 199, 30522]           --                        False
-│    └─Embedding: 2-3                    [4, 199]                  [4, 199, 16]              (488,352)                 False
-│    └─LSTM: 2-4                         [4, 199, 16]              [4, 199, 16]              (2,176)                   False
-│    └─Linear: 2-5                       [4, 199, 16]              [4, 199, 30522]           (518,874)                 False
-============================================================================================================================================
-Total params: 1,499,930
-Trainable params: 0
-Non-trainable params: 1,499,930
-Total mult-adds (Units.MEGABYTES): 9.46
-============================================================================================================================================
-Input size (MB): 0.01
-Forward/backward pass size (MB): 194.77
-Params size (MB): 6.00
-Estimated Total Size (MB): 200.79
-============================================================================================================================================
-```
 ### Baseline Visual encoder
 - We aim to improve this visual encoder model as taken from model summary, it shows the architecture and parameter distribution of the visual autoencoder. The below CNN autoencoder uses an encoder-decoder structure to learn spatial hierachies and reconstruction of images from latent features. It is built to improve reconstruction quality over time.
-### CNN Visual Autoencoder Summary
 
 
-```text
-===== CNN Visual Autoencoder Summary =====
-
-============================================================================================================================================
-Layer (type:depth-idx)                   Input Shape               Output Shape              Param #                   Trainable
-============================================================================================================================================
-VisualAutoencoder                        [4, 3, 64, 64]            [2, 3, 60, 125]           --                        True
-├─VisualEncoder: 1-1                     [4, 3, 64, 64]            [2, 16]                   --                        True
-│    └─Backbone: 2-1                     [4, 3, 64, 64]            [2, 16]                   --                        True
-│    │    └─Sequential: 3-1              [4, 3, 64, 64]            [4, 64, 8, 8]             33,920                    True
-│    │    └─Sequential: 3-2              [2, 8192]                 [2, 16]                   131,088                   True
-│    └─Backbone: 2-2                     [4, 3, 64, 64]            [2, 16]                   --                        True
-│    │    └─Sequential: 3-3              [4, 3, 64, 64]            [4, 64, 8, 8]             33,920                    True
-│    │    └─Sequential: 3-4              [2, 8192]                 [2, 16]                   131,088                   True
-│    └─Linear: 2-3                       [2, 32]                   [2, 16]                   528                       True
-├─VisualDecoder: 1-2                     [2, 16]                   [2, 3, 60, 125]           --                        True
-│    └─Linear: 2-4                       [2, 16]                   [2, 8192]                 139,264                   True
-│    └─Sequential: 2-5                   [2, 64, 8, 16]            [2, 3, 64, 128]           --                        True
-│    │    └─ConvTranspose2d: 3-5         [2, 64, 8, 16]            [2, 32, 16, 32]           18,464                    True
-│    │    └─GroupNorm: 3-6               [2, 32, 16, 32]           [2, 32, 16, 32]           64                        True
-│    │    └─LeakyReLU: 3-7               [2, 32, 16, 32]           [2, 32, 16, 32]           --                        --
-│    │    └─ConvTranspose2d: 3-8         [2, 32, 16, 32]           [2, 16, 32, 64]           12,816                    True
-│    │    └─GroupNorm: 3-9               [2, 16, 32, 64]           [2, 16, 32, 64]           32                        True
-│    │    └─LeakyReLU: 3-10              [2, 16, 32, 64]           [2, 16, 32, 64]           --                        --
-│    │    └─ConvTranspose2d: 3-11        [2, 16, 32, 64]           [2, 3, 64, 128]           2,355                     True
-│    │    └─Sigmoid: 3-12                [2, 3, 64, 128]           [2, 3, 64, 128]           --                        --
-│    └─Sequential: 2-6                   [2, 64, 8, 16]            [2, 3, 64, 128]           (recursive)               True
-│    │    └─ConvTranspose2d: 3-13        [2, 64, 8, 16]            [2, 32, 16, 32]           (recursive)               True
-│    │    └─GroupNorm: 3-14              [2, 32, 16, 32]           [2, 32, 16, 32]           (recursive)               True
-│    │    └─LeakyReLU: 3-15              [2, 32, 16, 32]           [2, 32, 16, 32]           --                        --
-│    │    └─ConvTranspose2d: 3-16        [2, 32, 16, 32]           [2, 16, 32, 64]           (recursive)               True
-│    │    └─GroupNorm: 3-17              [2, 16, 32, 64]           [2, 16, 32, 64]           (recursive)               True
-│    │    └─LeakyReLU: 3-18              [2, 16, 32, 64]           [2, 16, 32, 64]           --                        --
-│    │    └─ConvTranspose2d: 3-19        [2, 16, 32, 64]           [2, 3, 64, 128]           (recursive)               True
-│    │    └─Sigmoid: 3-20                [2, 3, 64, 128]           [2, 3, 64, 128]           --                        --
-============================================================================================================================================
-Total params: 503,539
-Trainable params: 503,539
-Non-trainable params: 0
-Total mult-adds (Units.MEGABYTES): 275.93
-============================================================================================================================================
-Input size (MB): 0.20
-Forward/backward pass size (MB): 7.73
-Params size (MB): 2.01
-Estimated Total Size (MB): 9.94
-============================================================================================================================================
-```
 
 ### Baseline Results
 
@@ -295,136 +219,10 @@ To ensure a fair comparison with the baseline architecture, all other hyperparam
 - and number of training epochs.
 
 This experiment therefore isolates the effect of replacing the handcrafted CNN visual encoder with a large-scale pretrained multimodal visual representation model, while also introducing staged decoder training and balanced multimodal loss optimisation to improve visual reconstruction performance.
-### CLIP MODEL 
-```python
-class CLIPEncoderWrapper(nn.Module):
-    def __init__(self, latent_dim, *args, **kwargs):
-        super().__init__()
-
-        self.clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-
-        for p in self.clip.parameters():
-            p.requires_grad = False
-
-        hidden_dim = self.clip.config.vision_config.hidden_size
-        self.projection = nn.Linear(hidden_dim, latent_dim)
-
-    def forward(self, x):
-        x = nn.functional.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
-
-        mean = torch.tensor([0.481, 0.457, 0.408], device=x.device).view(1,3,1,1)
-        std  = torch.tensor([0.268, 0.261, 0.275], device=x.device).view(1,3,1,1)
-        x = (x - mean) / std
-
-        outputs = self.clip.vision_model(pixel_values=x)
-        features = outputs.pooler_output
-
-        features = features / features.norm(dim=-1, keepdim=True)
-
-        z = self.projection(features)
-        return z
-class VisualDecoder(nn.Module):
-    """
-      Decodes a latent representation into a content image and a context image
-    """
-    def __init__(self, latent_dim=16, output_w = 8, output_h = 16):
-        super(VisualDecoder, self).__init__()
-        self.imh = 60
-        self.imw = 125
-        self.flatten_dim = 64 * output_w * output_h
-        self.output_w = output_w
-        self.output_h = output_h
-
-        self.fc1 = nn.Linear(latent_dim, self.flatten_dim)
-
-        self.decoder_conv = nn.Sequential(
-          nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=(1,1)),
-          nn.GroupNorm(8, 32),
-          nn.LeakyReLU(0.1),
-
-          nn.ConvTranspose2d(32, 16, kernel_size=5, stride=2, padding=2, output_padding=1),
-          nn.GroupNorm(8, 16),
-          nn.LeakyReLU(0.1),
-
-          nn.ConvTranspose2d(16, 3, kernel_size=7, stride=2, padding=3, output_padding=(1, 1)),
-          nn.Sigmoid() # Use nn.Tanh() if your data is normalized to [-1, 1]
-      )
-
-    def forward(self, z):
-      x = self.fc1(z)
-
-      x_content = self.decode_image(x)
-      x_context = self.decode_image(x)
-
-      return x_content, x_context
-
-    def decode_image(self, x):
-      x = x.view(-1, 64, self.output_w, self.output_h)      # reshape to conv feature map
-      x = self.decoder_conv(x)
-      x = x[:, :, :self.imh, :self.imw]          # crop to original size if needed
-      return x
-
-class VisualAutoencoder( nn.Module):
-    def __init__(self, latent_dim=16, output_w = 8, output_h = 16):
-        super(VisualAutoencoder, self).__init__()
-        self.encoder = CLIPEncoderWrapper(latent_dim, output_w, output_h)
-        self.decoder = VisualDecoder(latent_dim, output_w, output_h)
-
-    def forward(self, x):
-        z = self.encoder(x)
-        x_hat = self.decoder(z)
-        return x_hat
-
-```
 ### CLIP Visual encoder
 - We aim to improve this visual encoder model as taken from model summary, it shows the architecture and parameter distribution of the visual autoencoder. The below CNN autoencoder uses an encoder-decoder structure to learn spatial hierachies and reconstruction of images from latent features. It is built to improve reconstruction quality over time.
 ### CLIP Visual Autoencoder Summary
 
-
-```text
-===== CLIP Visual Autoencoder Summary =====
-
-==========================================================================================================================================================================
-Layer (type:depth-idx)                                                 Input Shape               Output Shape              Param #                   Trainable
-==========================================================================================================================================================================
-VisualAutoencoder                                                      [4, 3, 64, 64]            [4, 3, 60, 125]           --                        Partial
-├─CLIPEncoderWrapper: 1-1                                              [4, 3, 64, 64]            [4, 16]                   --                        Partial
-│    └─CLIPModel: 2-1                                                  --                        --                        63,821,313                False
-│    │    └─CLIPVisionTransformer: 3-1                                 --                        [4, 768]                  (87,456,000)              False
-│    └─Linear: 2-2                                                     [4, 768]                  [4, 16]                   12,304                    True
-├─VisualDecoder: 1-2                                                   [4, 16]                   [4, 3, 60, 125]           --                        True
-│    └─Linear: 2-3                                                     [4, 16]                   [4, 8192]                 139,264                   True
-│    └─Sequential: 2-4                                                 [4, 64, 8, 16]            [4, 3, 64, 128]           --                        True
-│    │    └─ConvTranspose2d: 3-2                                       [4, 64, 8, 16]            [4, 32, 16, 32]           18,464                    True
-│    │    └─GroupNorm: 3-3                                             [4, 32, 16, 32]           [4, 32, 16, 32]           64                        True
-│    │    └─LeakyReLU: 3-4                                             [4, 32, 16, 32]           [4, 32, 16, 32]           --                        --
-│    │    └─ConvTranspose2d: 3-5                                       [4, 32, 16, 32]           [4, 16, 32, 64]           12,816                    True
-│    │    └─GroupNorm: 3-6                                             [4, 16, 32, 64]           [4, 16, 32, 64]           32                        True
-│    │    └─LeakyReLU: 3-7                                             [4, 16, 32, 64]           [4, 16, 32, 64]           --                        --
-│    │    └─ConvTranspose2d: 3-8                                       [4, 16, 32, 64]           [4, 3, 64, 128]           2,355                     True
-│    │    └─Sigmoid: 3-9                                               [4, 3, 64, 128]           [4, 3, 64, 128]           --                        --
-│    └─Sequential: 2-5                                                 [4, 64, 8, 16]            [4, 3, 64, 128]           (recursive)               True
-│    │    └─ConvTranspose2d: 3-10                                      [4, 64, 8, 16]            [4, 32, 16, 32]           (recursive)               True
-│    │    └─GroupNorm: 3-11                                            [4, 32, 16, 32]           [4, 32, 16, 32]           (recursive)               True
-│    │    └─LeakyReLU: 3-12                                            [4, 32, 16, 32]           [4, 32, 16, 32]           --                        --
-│    │    └─ConvTranspose2d: 3-13                                      [4, 32, 16, 32]           [4, 16, 32, 64]           (recursive)               True
-│    │    └─GroupNorm: 3-14                                            [4, 16, 32, 64]           [4, 16, 32, 64]           (recursive)               True
-│    │    └─LeakyReLU: 3-15                                            [4, 16, 32, 64]           [4, 16, 32, 64]           --                        --
-│    │    └─ConvTranspose2d: 3-16                                      [4, 16, 32, 64]           [4, 3, 64, 128]           (recursive)               True
-│    │    └─Sigmoid: 3-17                                              [4, 3, 64, 128]           [4, 3, 64, 128]           --                        --
-==========================================================================================================================================================================
-Total params: 151,462,612
-Trainable params: 185,299
-Non-trainable params: 151,277,313
-Total mult-adds (Units.GIGABYTES): 1.24
-==========================================================================================================================================================================
-Input size (MB): 0.20
-Forward/backward pass size (MB): 173.09
-Params size (MB): 350.56
-Estimated Total Size (MB): 523.85
-==========================================================================================================================================================================
-
-```
 
 ### LSTM + CLIP Results
 
@@ -515,182 +313,6 @@ Although the comparison with the baseline architecture is not entirely fair, sin
 
 This experiment therefore isolates the effect of replacing the handcrafted pretrained LSTM encoder with a large-scale pretrained transformer-based language representation model, while also introducing staged decoder training and balanced multimodal loss optimization to improve text reconstruction performance.
 
-### RoBERTa MODEL 
-```python
-class RobertaEncoder(nn.Module):
-    def __init__(self, hidden_dim, num_layers=1, dropout=0.1, unfreeze_layers=4):
-        super().__init__()
-
-        self.roberta = RobertaModel.from_pretrained("roberta-base")
-
-        # Freeze everything
-        for param in self.roberta.parameters():
-            param.requires_grad = False
-
-        # Unfreeze last N layers
-        for layer in self.roberta.encoder.layer[-unfreeze_layers:]:
-            for param in layer.parameters():
-                param.requires_grad = True
-
-        # =========================
-        # Attention Pooling (nonlinear)
-        # =========================
-        self.attn_pool = nn.Sequential(
-            nn.Linear(self.roberta.config.hidden_size, 128),
-            nn.Tanh(),
-            nn.Linear(128, 1)
-        )
-
-        # =========================
-        # Projection Head (512 → 256)
-        # =========================
-        self.projection = nn.Sequential(
-            nn.Linear(self.roberta.config.hidden_size, 512),
-            nn.GELU(),
-            nn.LayerNorm(512),
-            nn.Dropout(dropout),
-
-            nn.Linear(512, 256),
-            nn.GELU(),
-            nn.LayerNorm(256),
-            nn.Dropout(dropout),
-
-            nn.Linear(256, hidden_dim)
-        )
-
-        self.layer_norm = nn.LayerNorm(hidden_dim)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, input_ids, attention_mask=None):
-        outputs = self.roberta(
-            input_ids=input_ids,
-            attention_mask=attention_mask
-        )
-
-        last_hidden = outputs.last_hidden_state  # (B, T, 768)
-
-        # =========================
-        # Attention Pooling
-        # =========================
-        attn_scores = self.attn_pool(last_hidden)  # (B, T, 1)
-
-        if attention_mask is not None:
-            mask = attention_mask.unsqueeze(-1)
-            attn_scores = attn_scores.masked_fill(mask == 0, -1e9)
-
-        attn_weights = torch.softmax(attn_scores, dim=1)
-        pooled_attn = torch.sum(attn_weights * last_hidden, dim=1)  # (B, 768)
-
-        # =========================
-        # CLS Token Fusion
-        # =========================
-        cls_token = last_hidden[:, 0]  # (B, 768)
-        pooled = 0.7 * pooled_attn + 0.3 * cls_token
-
-        # =========================
-        # Projection
-        # =========================
-        latent = self.projection(pooled)
-
-        # Final normalization
-        latent = self.layer_norm(latent)
-        latent = self.dropout(latent)
-
-        # =========================
-        # LSTM-compatible output
-        # =========================
-        hidden = latent.unsqueeze(0)  # (1, B, hidden_dim)
-        cell = torch.zeros_like(hidden)
-
-        return None, hidden, cell
-
-
-class DecoderLSTM(nn.Module):
-    """
-      Decodes a latent space representation into a sequence of tokens.
-    """
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers=1, dropout=0.1):
-        super().__init__()
-        self.vocab_size = vocab_size
-        self.embedding_dim = embedding_dim
-        self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
-
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers,
-                            batch_first=True, dropout=dropout if num_layers > 1 else 0)
-        self.out = nn.Linear(hidden_dim, vocab_size) # Should be hidden_dim
-
-    def forward(self, input_seq, hidden, cell):
-        embedded = self.embedding(input_seq)
-        output, (hidden, cell) = self.lstm(embedded, (hidden, cell))
-        prediction = self.out(output)
-        return prediction, hidden, cell
-#Modified
-# We create the basic text autoencoder (a special case of a sequence to sequence model)
-class Seq2SeqLSTM(nn.Module):
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, input_seq, target_seq, attention_mask=None):
-        # Pass keyword args to RobertaEncoder
-        _enc_out, hidden, cell = self.encoder(
-            input_ids=input_seq,      # ← Keyword arg!
-            attention_mask=attention_mask
-        )
-
-        decoder_input = target_seq[:, :-1]
-        predictions, _hidden, _cell = self.decoder(decoder_input, hidden, cell)
-        return predictions
-```
-
-```text
-===== Roberta Text Autoencoder Summary =====
-
-=====================================================================================================================================================================
-Layer (type:depth-idx)                                            Input Shape               Output Shape              Param #                   Trainable
-=====================================================================================================================================================================
-Seq2SeqLSTM                                                       [4, 120]                  [4, 119, 50265]           --                        Partial
-├─RobertaEncoder: 1-1                                             --                        --                        --                        Partial
-│    └─RobertaModel: 2-1                                          --                        [4, 768]                  --                        Partial
-│    │    └─RobertaEmbeddings: 3-1                                --                        [4, 120, 768]             (39,000,576)              False
-│    │    └─RobertaEncoder: 3-2                                   [4, 120, 768]             [4, 120, 768]             85,054,464                Partial
-│    │    └─RobertaPooler: 3-3                                    [4, 120, 768]             [4, 768]                  (590,592)                 False
-│    └─Sequential: 2-2                                            [4, 120, 768]             [4, 120, 1]               --                        True
-│    │    └─Linear: 3-4                                           [4, 120, 768]             [4, 120, 128]             98,432                    True
-│    │    └─Tanh: 3-5                                             [4, 120, 128]             [4, 120, 128]             --                        --
-│    │    └─Linear: 3-6                                           [4, 120, 128]             [4, 120, 1]               129                       True
-│    └─Sequential: 2-3                                            [4, 768]                  [4, 16]                   --                        True
-│    │    └─Linear: 3-7                                           [4, 768]                  [4, 512]                  393,728                   True
-│    │    └─GELU: 3-8                                             [4, 512]                  [4, 512]                  --                        --
-│    │    └─LayerNorm: 3-9                                        [4, 512]                  [4, 512]                  1,024                     True
-│    │    └─Dropout: 3-10                                         [4, 512]                  [4, 512]                  --                        --
-│    │    └─Linear: 3-11                                          [4, 512]                  [4, 256]                  131,328                   True
-│    │    └─GELU: 3-12                                            [4, 256]                  [4, 256]                  --                        --
-│    │    └─LayerNorm: 3-13                                       [4, 256]                  [4, 256]                  512                       True
-│    │    └─Dropout: 3-14                                         [4, 256]                  [4, 256]                  --                        --
-│    │    └─Linear: 3-15                                          [4, 256]                  [4, 16]                   4,112                     True
-│    └─LayerNorm: 2-4                                             [4, 16]                   [4, 16]                   32                        True
-│    └─Dropout: 2-5                                               [4, 16]                   [4, 16]                   --                        --
-├─DecoderLSTM: 1-2                                                [4, 119]                  [4, 119, 50265]           --                        True
-│    └─Embedding: 2-6                                             [4, 119]                  [4, 119, 16]              804,240                   True
-│    └─LSTM: 2-7                                                  [4, 119, 16]              [4, 119, 16]              2,176                     True
-│    └─Linear: 2-8                                                [4, 119, 16]              [4, 119, 50265]           854,505                   True
-=====================================================================================================================================================================
-Total params: 126,935,850
-Trainable params: 30,641,706
-Non-trainable params: 96,294,144
-Total mult-adds (Units.MEGABYTES): 508.77
-=====================================================================================================================================================================
-Input size (MB): 0.01
-Forward/backward pass size (MB): 593.18
-Params size (MB): 507.74
-Estimated Total Size (MB): 1100.93
-=====================================================================================================================================================================
-
-```
 
 ### RoBERTa + CNN Model
 | Model | Text Loss | Image Loss | BLEU | ROUGE-L | METEOR | SSIM | PSNR | Number of Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
@@ -783,7 +405,7 @@ Ground Truth:
  The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
 
 Prediction:
- In night was thick with a as the the, near the room of the room of, The air was the a was weight of the andase. his sense that had change the weight of the. The the,, the weight, the., his felt near the, his mind of. sense of the. the, The airered, his andWe did he was. the was The was he air of the the the. the on, The� to he felt at the,, his felt, his that had to the the sense. his that the change be. he to,
+ In night was thick with a as the the, near the room of the room of, The air was the a was weight of the andase. his sense that had change the weight of the. The the,, the weight, the., his felt near the, his mind of. sense of the. the, The airered, his andWe did he was. the was The was he air of the the the. the on, The  to he felt at the,, his felt, his that had to the the sense. his that the change be. he to,
 
 ![example_2](Experiment/Roberta_CLIP_INI_experiment/example_2.png)
 Ground Truth:
@@ -870,7 +492,7 @@ Ground Truth:
  The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
 
 Prediction:
- In night was thick with tension as the the stood in the room of a room of. The air was a a was room of the old tension. his silent of the change the tension of the. The The,, the background, the,, his felt in the, his mind expression. mix of the. the. The air of was the� a, the,, the moment, he beginning of the of the. the..� he had at the,, his felt the his that was to the the sense. but that would change the. a..
+ In night was thick with tension as the the stood in the room of a room of. The air was a a was room of the old tension. his silent of the change the tension of the. The The,, the background, the,, his felt in the, his mind expression. mix of the. the. The air of was the  a, the,, the moment, he beginning of the of the. the..  he had at the,, his felt the his that was to the the sense. but that would change the. a..
 
 ![example_2](Experiment/Roberta_CLIP_FNL_2_experiment/example_2.png)
 
@@ -981,105 +603,6 @@ Importantly, the decoder architecture remains unchanged, meaning all performance
 
 Overall, this experiment represents a shift from tuning training parameters to improving representation learning, with both encoders redesigned to produce a richer, more stable shared latent space for multimodal sequence prediction.
 
-### Model Summary
-
-```text
-===== Roberta Text Autoencoder Summary =====
-
-=====================================================================================================================================================================
-Layer (type:depth-idx)                                            Input Shape               Output Shape              Param #                   Trainable
-=====================================================================================================================================================================
-Seq2SeqLSTM                                                       [16, 120]                 [16, 119, 50265]          --                        Partial
-├─RobertaEncoder: 1-1                                             --                        [16, 128]                 --                        Partial
-│    └─RobertaModel: 2-1                                          --                        [16, 768]                 --                        Partial
-│    │    └─RobertaEmbeddings: 3-1                                --                        [16, 120, 768]            (39,000,576)              False
-│    │    └─RobertaEncoder: 3-2                                   [16, 120, 768]            [16, 120, 768]            85,054,464                Partial
-│    │    └─RobertaPooler: 3-3                                    [16, 120, 768]            [16, 768]                 (590,592)                 False
-│    └─Sequential: 2-2                                            [16, 120, 768]            [16, 120, 1]              --                        True
-│    │    └─Linear: 3-4                                           [16, 120, 768]            [16, 120, 128]            98,432                    True
-│    │    └─Tanh: 3-5                                             [16, 120, 128]            [16, 120, 128]            --                        --
-│    │    └─Linear: 3-6                                           [16, 120, 128]            [16, 120, 1]              129                       True
-│    └─Sequential: 2-3                                            [16, 768]                 [16, 128]                 --                        True
-│    │    └─Linear: 3-7                                           [16, 768]                 [16, 512]                 393,728                   True
-│    │    └─GELU: 3-8                                             [16, 512]                 [16, 512]                 --                        --
-│    │    └─LayerNorm: 3-9                                        [16, 512]                 [16, 512]                 1,024                     True
-│    │    └─Dropout: 3-10                                         [16, 512]                 [16, 512]                 --                        --
-│    │    └─Linear: 3-11                                          [16, 512]                 [16, 256]                 131,328                   True
-│    │    └─GELU: 3-12                                            [16, 256]                 [16, 256]                 --                        --
-│    │    └─LayerNorm: 3-13                                       [16, 256]                 [16, 256]                 512                       True
-│    │    └─Dropout: 3-14                                         [16, 256]                 [16, 256]                 --                        --
-│    │    └─Linear: 3-15                                          [16, 256]                 [16, 128]                 32,896                    True
-│    └─LayerNorm: 2-4                                             [16, 128]                 [16, 128]                 256                       True
-│    └─Dropout: 2-5                                               [16, 128]                 [16, 128]                 --                        --
-├─DecoderLSTM: 1-2                                                [16, 119]                 [16, 119, 50265]          --                        True
-│    └─Embedding: 2-6                                             [16, 119]                 [16, 119, 128]            6,433,920                 True
-│    └─LSTM: 2-7                                                  [16, 119, 128]            [16, 119, 128]            264,192                   True
-│    └─Sequential: 2-8                                            [16, 119, 128]            [16, 119, 128]            --                        True
-│    │    └─Linear: 3-16                                          [16, 119, 128]            [16, 119, 128]            16,512                    True
-│    │    └─GELU: 3-17                                            [16, 119, 128]            [16, 119, 128]            --                        --
-│    │    └─LayerNorm: 3-18                                       [16, 119, 128]            [16, 119, 128]            256                       True
-│    └─Linear: 2-9                                                [16, 119, 128]            [16, 119, 50265]          6,484,185                 True
-=====================================================================================================================================================================
-Total params: 138,503,002
-Trainable params: 56,384,602
-Non-trainable params: 82,118,400
-Total mult-adds (Units.GIGABYTES): 2.71
-=====================================================================================================================================================================
-Input size (MB): 0.04
-Forward/backward pass size (MB): 2380.07
-Params size (MB): 554.01
-Estimated Total Size (MB): 2934.12
-=====================================================================================================================================================================
-```
-
-```text
-===== CLIP Visual Autoencoder Summary =====
-
-==========================================================================================================================================================================
-Layer (type:depth-idx)                                                 Input Shape               Output Shape              Param #                   Trainable
-==========================================================================================================================================================================
-VisualAutoencoder                                                      [16, 3, 64, 64]           [16, 3, 60, 125]          --                        Partial
-├─CLIPEncoderWrapper: 1-1                                              [16, 3, 64, 64]           [16, 128]                 --                        Partial
-│    └─CLIPModel: 2-1                                                  --                        --                        63,821,313                Partial
-│    │    └─CLIPVisionTransformer: 3-1                                 --                        [16, 768]                 87,456,000                Partial
-│    └─Sequential: 2-2                                                 [16, 768]                 [16, 128]                 --                        True
-│    │    └─Linear: 3-2                                                [16, 768]                 [16, 512]                 393,728                   True
-│    │    └─LayerNorm: 3-3                                             [16, 512]                 [16, 512]                 1,024                     True
-│    │    └─GELU: 3-4                                                  [16, 512]                 [16, 512]                 --                        --
-│    │    └─Dropout: 3-5                                               [16, 512]                 [16, 512]                 --                        --
-│    │    └─Linear: 3-6                                                [16, 512]                 [16, 128]                 65,664                    True
-├─VisualDecoder: 1-2                                                   [16, 128]                 [16, 3, 60, 125]          --                        True
-│    └─Linear: 2-3                                                     [16, 128]                 [16, 8192]                1,056,768                 True
-│    └─Sequential: 2-4                                                 [16, 64, 8, 16]           [16, 3, 64, 128]          --                        True
-│    │    └─ConvTranspose2d: 3-7                                       [16, 64, 8, 16]           [16, 32, 16, 32]          18,464                    True
-│    │    └─GroupNorm: 3-8                                             [16, 32, 16, 32]          [16, 32, 16, 32]          64                        True
-│    │    └─LeakyReLU: 3-9                                             [16, 32, 16, 32]          [16, 32, 16, 32]          --                        --
-│    │    └─ConvTranspose2d: 3-10                                      [16, 32, 16, 32]          [16, 16, 32, 64]          12,816                    True
-│    │    └─GroupNorm: 3-11                                            [16, 16, 32, 64]          [16, 16, 32, 64]          32                        True
-│    │    └─LeakyReLU: 3-12                                            [16, 16, 32, 64]          [16, 16, 32, 64]          --                        --
-│    │    └─ConvTranspose2d: 3-13                                      [16, 16, 32, 64]          [16, 3, 64, 128]          2,355                     True
-│    │    └─Sigmoid: 3-14                                              [16, 3, 64, 128]          [16, 3, 64, 128]          --                        --
-│    └─Sequential: 2-5                                                 [16, 64, 8, 16]           [16, 3, 64, 128]          (recursive)               True
-│    │    └─ConvTranspose2d: 3-15                                      [16, 64, 8, 16]           [16, 32, 16, 32]          (recursive)               True
-│    │    └─GroupNorm: 3-16                                            [16, 32, 16, 32]          [16, 32, 16, 32]          (recursive)               True
-│    │    └─LeakyReLU: 3-17                                            [16, 32, 16, 32]          [16, 32, 16, 32]          --                        --
-│    │    └─ConvTranspose2d: 3-18                                      [16, 32, 16, 32]          [16, 16, 32, 64]          (recursive)               True
-│    │    └─GroupNorm: 3-19                                            [16, 16, 32, 64]          [16, 16, 32, 64]          (recursive)               True
-│    │    └─LeakyReLU: 3-20                                            [16, 16, 32, 64]          [16, 16, 32, 64]          --                        --
-│    │    └─ConvTranspose2d: 3-21                                      [16, 16, 32, 64]          [16, 3, 64, 128]          (recursive)               True
-│    │    └─Sigmoid: 3-22                                              [16, 3, 64, 128]          [16, 3, 64, 128]          --                        --
-==========================================================================================================================================================================
-Total params: 152,828,228
-Trainable params: 15,726,659
-Non-trainable params: 137,101,569
-Total mult-adds (Units.GIGABYTES): 4.99
-==========================================================================================================================================================================
-Input size (MB): 0.79
-Forward/backward pass size (MB): 691.60
-Params size (MB): 356.02
-Estimated Total Size (MB): 1048.41
-==========================================================================================================================================================================
-```
 
 ## RoBERTa + CLIP 3 Model
 | Model | Text_Loss | Image_Loss | BLEU | ROUGE-L | METEOR | SSIM | PSNR | Number of Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
@@ -1100,7 +623,7 @@ Ground Truth:
  The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
 
 Prediction:
- In night was thick with tension as John Smith stood at the dim of the bustling.. The room was the a was events of the impending decision pressing and silent that could change the course of his. Smith felt at him air, the,, who stood near the, his mind a and stark of the. the. The air and about "�We, little come to this moment The she she events beyond them them the...� she she took at the,, his felt, his that was to make. journey. but that he change make or the..
+ In night was thick with tension as John Smith stood at the dim of the bustling.. The room was the a was events of the impending decision pressing and silent that could change the course of his. Smith felt at him air, the,, who stood near the, his mind a and stark of the. the. The air and about " We, little come to this moment The she she events beyond them them the...  she she took at the,, his felt, his that was to make. journey. but that he change make or the..
 
 
 ![example_2](Experiment/Roberta_CLIP_FNL_3_experiment/example_2.png)
@@ -1146,63 +669,6 @@ After pretraining both autoencoders, the pretrained components were integrated i
 
 **[Visual Autoencoder](src/CLIP_visual_encoder.py)** - Final Modification of the CLIP autoencoder
 
-```text
-===== CLIP Visual Autoencoder Summary =====
-
-==========================================================================================================================================================================
-Layer (type:depth-idx)                                                 Input Shape               Output Shape              Param #                   Trainable
-==========================================================================================================================================================================
-VisualAutoencoder                                                      [16, 3, 64, 64]           [16, 3, 224, 224]         --                        Partial
-├─CLIPEncoderWrapper: 1-1                                              [16, 3, 64, 64]           [16, 128]                 --                        Partial
-│    └─CLIPModel: 2-1                                                  --                        --                        63,821,313                Partial
-│    │    └─CLIPVisionTransformer: 3-1                                 --                        [16, 197, 768]            85,799,424                Partial
-│    └─Sequential: 2-2                                                 [16, 768]                 [16, 128]                 --                        True
-│    │    └─Linear: 3-2                                                [16, 768]                 [16, 512]                 393,728                   True
-│    │    └─LayerNorm: 3-3                                             [16, 512]                 [16, 512]                 1,024                     True
-│    │    └─GELU: 3-4                                                  [16, 512]                 [16, 512]                 --                        --
-│    │    └─Linear: 3-5                                                [16, 512]                 [16, 128]                 65,664                    True
-├─VisualDecoder: 1-2                                                   [16, 128]                 [16, 3, 224, 224]         --                        True
-│    └─Linear: 2-3                                                     [16, 128]                 [16, 50176]               6,472,704                 True
-│    └─Conv2d: 2-4                                                     [16, 768, 14, 14]         [16, 64, 14, 14]          49,216                    True
-│    └─Conv2d: 2-5                                                     [16, 768, 14, 14]         [16, 64, 14, 14]          49,216                    True
-│    └─Conv2d: 2-6                                                     [16, 768, 14, 14]         [16, 64, 14, 14]          49,216                    True
-│    └─Conv2d: 2-7                                                     [16, 448, 14, 14]         [16, 256, 14, 14]         1,032,448                 True
-│    └─Sequential: 2-8                                                 [16, 256, 14, 14]         [16, 128, 28, 28]         --                        True
-│    │    └─ResidualBlock: 3-6                                         [16, 256, 14, 14]         [16, 256, 14, 14]         1,181,184                 True
-│    │    └─ConvTranspose2d: 3-7                                       [16, 256, 14, 14]         [16, 128, 28, 28]         524,416                   True
-│    │    └─GroupNorm: 3-8                                             [16, 128, 28, 28]         [16, 128, 28, 28]         256                       True
-│    │    └─GELU: 3-9                                                  [16, 128, 28, 28]         [16, 128, 28, 28]         --                        --
-│    │    └─ResidualBlock: 3-10                                        [16, 128, 28, 28]         [16, 128, 28, 28]         295,680                   True
-│    └─Sequential: 2-9                                                 [16, 128, 28, 28]         [16, 64, 56, 56]          --                        True
-│    │    └─ConvTranspose2d: 3-11                                      [16, 128, 28, 28]         [16, 64, 56, 56]          131,136                   True
-│    │    └─GroupNorm: 3-12                                            [16, 64, 56, 56]          [16, 64, 56, 56]          128                       True
-│    │    └─GELU: 3-13                                                 [16, 64, 56, 56]          [16, 64, 56, 56]          --                        --
-│    │    └─ResidualBlock: 3-14                                        [16, 64, 56, 56]          [16, 64, 56, 56]          74,112                    True
-│    └─Sequential: 2-10                                                [16, 64, 56, 56]          [16, 32, 112, 112]        --                        True
-│    │    └─ConvTranspose2d: 3-15                                      [16, 64, 56, 56]          [16, 32, 112, 112]        32,800                    True
-│    │    └─GroupNorm: 3-16                                            [16, 32, 112, 112]        [16, 32, 112, 112]        64                        True
-│    │    └─GELU: 3-17                                                 [16, 32, 112, 112]        [16, 32, 112, 112]        --                        --
-│    │    └─ResidualBlock: 3-18                                        [16, 32, 112, 112]        [16, 32, 112, 112]        18,624                    True
-│    └─Sequential: 2-11                                                [16, 32, 112, 112]        [16, 16, 224, 224]        --                        True
-│    │    └─ConvTranspose2d: 3-19                                      [16, 32, 112, 112]        [16, 16, 224, 224]        8,208                     True
-│    │    └─GroupNorm: 3-20                                            [16, 16, 224, 224]        [16, 16, 224, 224]        32                        True
-│    │    └─GELU: 3-21                                                 [16, 16, 224, 224]        [16, 16, 224, 224]        --                        --
-│    │    └─ResidualBlock: 3-22                                        [16, 16, 224, 224]        [16, 16, 224, 224]        4,704                     True
-│    └─Sequential: 2-12                                                [16, 16, 224, 224]        [16, 3, 224, 224]         --                        True
-│    │    └─Conv2d: 3-23                                               [16, 16, 224, 224]        [16, 3, 224, 224]         435                       True
-│    │    └─Sigmoid: 3-24                                              [16, 3, 224, 224]         [16, 3, 224, 224]         --                        --
-==========================================================================================================================================================================
-Total params: 160,005,732
-Trainable params: 24,560,739
-Non-trainable params: 135,444,993
-Total mult-adds (Units.GIGABYTES): 52.25
-==========================================================================================================================================================================
-Input size (MB): 0.79
-Forward/backward pass size (MB): 3815.06
-Params size (MB): 384.73
-Estimated Total Size (MB): 4200.58
-==========================================================================================================================================================================
-```
 
 #### Single Image Test
 **[src/single_image_test.py]**
