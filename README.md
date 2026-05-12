@@ -184,22 +184,13 @@ Overall, the baseline model struggled with semantic consistency, image quality, 
 
 # LSTM + CLIP Model
 
-In this experiment, the original CNN-based visual encoder used in the baseline model is replaced with a pretrained CLIP visual encoder. The primary goal of this modification is to improve the quality of the learned visual representations and enhance image reconstruction performance, particularly in terms of SSIM and PSNR metrics.
+In this experiment, I replaced the baseline CNN image encoder with a pretrained CLIP visual encoder (`openai/clip-vit-base-patch32`) to improve visual feature extraction and image reconstruction quality.
 
-The baseline model utilised a lightweight custom CNN to encode image frames into latent representations. Although computationally efficient, the CNN was trained from limited data and therefore had limited capability in extracting rich semantic visual features. This was reflected in the relatively low SSIM and PSNR scores obtained during baseline evaluation.
+The original CNN encoder was lightweight and efficient, but it struggled to capture strong semantic and spatial information, which resulted in low SSIM and PSNR scores. To improve this, I used CLIP because it was pretrained on millions of image-text pairs and is able to learn much richer visual representations that align images with language.
 
-To address this limitation, the CNN encoder was replaced with the vision component of the pretrained CLIP (Contrastive Language–Image Pretraining) model, specifically:
+The input frames were resized to `224 × 224`, normalized using CLIP preprocessing statistics, and passed through the CLIP Vision Transformer to generate higher-quality visual embeddings. These embeddings were then projected into the same latent space used by the existing multimodal pipeline so the LSTM decoder and fusion components could still be used without major architectural changes.
 
-- `openai/clip-vit-base-patch32`
-
-CLIP is a large-scale multimodal model developed by OpenAI and trained on millions of image-text pairs using contrastive learning. Unlike traditional CNN encoders trained solely for image classification, CLIP learns semantically meaningful visual representations that align images with natural language descriptions in a shared embedding space. This enables the model to capture higher-level contextual and semantic information from images.
-
-In the modified architecture, the CLIP vision encoder is used as a pretrained feature extractor. Input frames are resized to `224 × 224`, normalized using CLIP preprocessing statistics, and passed through the CLIP Vision Transformer (ViT) backbone to obtain high-dimensional visual embeddings. These embeddings are then projected into the same latent dimension used by the baseline model in order to maintain compatibility with the existing LSTM decoder and multimodal fusion pipeline.
-
-To improve training stability, a staged training strategy was also introduced. During the first **2 epochs**, the image decoder was frozen while the remaining components adapted to the pretrained CLIP representations. After this warm-up phase, the image decoder was unfrozen and jointly trained for the remaining **3 epochs**. This gradual unfreezing approach helped stabilise optimisation and allowed the decoder to better adapt to the richer semantic features extracted by CLIP.
-
-In addition, the multimodal loss function was rebalanced to reduce text dominance during optimisation. In the baseline setup, the text generation loss contributed more strongly to the total optimisation objective, which could bias training toward textual performance at the expense of image reconstruction quality. To address this, the image reconstruction loss was given a higher weighting while the text loss contribution was reduced:
-
+I also introduced a staged training approach where the image decoder was frozen for the first 2 epochs to allow the model to adapt to the pretrained CLIP features before full joint training. In addition, the multimodal loss was rebalanced by increasing image reconstruction weighting and reducing text weighting to help reduce text dominance during training and improve image generation quality.
 ```python
 # Total loss (base + optional improvements)
 W_IM = 3.0
@@ -243,16 +234,11 @@ This experiment therefore isolates the effect of replacing the handcrafted CNN v
 #### Example 
 ![Example 1](Experiment/LSTM_CLIP_experiment/example_1.png)
 
-Ground Truth:
- the confrontation continued as anon leader stood among the soldiers. the air was thick with tension, and they tried to decipher the meaning behind the masked figure. anon leader spoke again, “ we are not your enemies. we are the voice of the people. ” the soldiers remained silent, unsure of how to respond.
 
 Prediction:
  in room was to he air of, in the tension, the room was a with a, and the was to the beher the tension. the tension atmosphere. air was,,, and he need to was mind, need to weight was the tension, room ' a, and of the to the. in lighting lighting lighting lighting lighting lightinglllllllllllllllllllllrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrked
 
 ![Example 2](Experiment/LSTM_CLIP_experiment/example_2.png)
-
-Ground Truth:
- back outside, sarah addressed tom with a sense of urgency. " we need to find her, " she insisted. tom nodded in agreement, his mind racing with possibilities. the potted plant stood as a silent witness to the tension between her and him. the indoor setting felt like a cage, trapping them in their fear.
 
 Prediction:
  in in, the, the, the silent of unease. the we need to the a, but he had,,, the, and mind racing with the. roomted plant, near he man witness to the tension. him. the. room room was a a sense, and him. the shoulders. on lighting lighting lighting lighting lighting lightinglllllllllllllllllrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrkedrked
@@ -278,46 +264,24 @@ The results says indicates that the CLIP is outperforming the CNN baseline even 
 
 # RoBERTa + CNN Model
 
-In this experiment, the original LSTM-based text encoder used in the baseline model is replaced with a pretrained RoBERTa encoder. The primary goal of this modification is to improve the quality of the learned language representations and enhance text reconstruction performance, particularly in terms of BLEU, ROUGE, and METEOR metrics.
+In this experiment, I replaced the baseline LSTM text encoder with a pretrained RoBERTa encoder to improve language understanding and text generation quality, particularly for BLEU, ROUGE, and METEOR performance.
 
-RoBERTa is a transformer-based model pretrained on a large corpus of English text using self-supervised learning. This means it was trained on raw text data without manual labeling, allowing it to leverage massive publicly available datasets. During pretraining, the model automatically generates learning objectives from the text itself.
+The original LSTM encoder processed text sequentially and compressed the entire sentence into a single hidden representation, which limited its ability to capture long-range semantic relationships. To improve this, I introduced `roberta-base`, a pretrained transformer model trained on large-scale text data using self-supervised learning.
 
-The baseline LSTM encoder learns sequentially from left to right. It attempts to compress the entire sentence into its final hidden state, after which the decoder reconstructs or generates sequences from that compressed representation.
-
-The purpose of the RoBERTa encoder in this architecture is to:
-- extract contextual language features,
-- compress them into a latent representation,
-- and convert them into an LSTM-compatible hidden state.
-
-Although the encoder is transformer-based, the decoder remains an LSTM, allowing for a more direct comparison against the baseline architecture.
-
-In the modified architecture, the pipeline becomes:
+The updated pipeline became:
 
 ```text
 RoBERTa Encoder → Attention Pooling → Projection Head → LSTM Decoder
-```
-
-The RoBERTa encoder is initially frozen because of its large number of parameters, which can otherwise make training unstable or lead to overfitting. Only the later layers (last 4 layers) are unfrozen, since fine-tuning the final layers helps RoBERTa adapt to the downstream task while still retaining its pretrained general language knowledge.
-
-The RoBERTa encoder then performs learned attention pooling to determine which tokens are most important within a sentence. The attention mask prevents padding tokens from influencing the attention mechanism, and weighted attention is used to create a summarized sequence representation.
-
-The model also incorporates CLS token fusion, where the first token representation acts as a global sentence-level summary. In addition, layer normalization is applied to stabilize training, while the projection head performs latent compression before passing the representation into the LSTM decoder. The decoder then performs autoregressive sequence generation similarly to the baseline model.
-
-Although the comparison with the baseline architecture is not entirely fair, since the baseline LSTM encoder had already been pretrained independently for 15 epochs, all other hyperparameters and training settings were kept unchanged, including:
-- CNN text decoder,
-- latent dimension,
-- embedding dimension,
-- batch size,
-- learning rate,
-- and number of training epochs.
-
-This experiment therefore isolates the effect of replacing the handcrafted pretrained LSTM encoder with a large-scale pretrained transformer-based language representation model, while also introducing staged decoder training and balanced multimodal loss optimization to improve text reconstruction performance.
-
-
 ### RoBERTa + CNN Model
 | Model | Text Loss | Image Loss | BLEU | ROUGE-L | METEOR | SSIM | PSNR | Number of Epochs | Learning Rate | Batch Size | Embedding Dim | Latent Dim | Num Layers |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Roberta+CNN | 5.302131553 | 0.078952427 | 0.007175907 | 0.204880145 | 0.154409143 | 0.128350360 | 11.076756277 | 5 | 0.001 | 4 | 16 | 16 | 1 |
+```
+RoBERTa was used to extract richer contextual language features, which were then compressed into a latent representation compatible with the existing LSTM decoder. This allowed the experiment to focus on improving the encoder while still keeping the decoder architecture similar to the baseline for comparison.
+
+To improve training stability, most of the RoBERTa layers were frozen initially, while only the final 4 transformer layers were fine-tuned. Attention pooling and CLS token fusion were used to create a stronger sentence-level representation before projection into the latent space. Layer normalization was also applied to stabilize training.
+
+All major hyperparameters remained unchanged from the baseline model, including latent dimension, embedding size, batch size, learning rate, and number of epochs. This experiment therefore focused mainly on evaluating the impact of replacing the handcrafted LSTM encoder with a large pretrained transformer-based language model.
 
 ## Figure
 #### Training loss
@@ -401,16 +365,10 @@ This experiment therefore evaluates whether the stronger pretrained language and
 
 #### Example
 ![example_1](Experiment/Roberta_CLIP_INI_experiment/example_1.png)
-Ground Truth:
- The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
-
 Prediction:
  In night was thick with a as the the, near the room of the room of, The air was the a was weight of the andase. his sense that had change the weight of the. The the,, the weight, the., his felt near the, his mind of. sense of the. the, The airered, his andWe did he was. the was The was he air of the the the. the on, The  to he felt at the,, his felt, his that had to the the sense. his that the change be. he to,
 
 ![example_2](Experiment/Roberta_CLIP_INI_experiment/example_2.png)
-Ground Truth:
- In a dimly lit room, Susan clutched the cell phone tightly, her voice trembling over the line. She whispered anxiously, "Tom, something's wrong. I can't explain it, but I feel like we're running out of time." The indoor setting seemed to close in around her, amplifying the sense of urgency in the air.
-
 Prediction:
  In the dimly lit room, a stoodched the room,,, his eyes a. the weight. The had, he, hisWe. his was mind. The felt't shake the was his the felt the a need a on of the, air room, to the in the the. aifying the weight of the. the weight. The the,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
@@ -444,15 +402,11 @@ Across runs, I adjusted epochs, learning rate, batch size, embedding/latent dime
 
 #### Example
 ![example_1](Experiment/Roberta_CLIP_FNL_experiment/example_1.png)
-Ground Truth:
- The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
 
 Prediction:
  In the the a, a.,,., the., the., the The,,, a,. of the.,. his the, the the,., the. The,, the the., the,, the the, the, his,,,,, the. the, The,,, his the the,.,. the the, the..,,, the.., the,,. the,, the,, the,, his the,, the the the, his, the, the,, the.
 
 ![example_2](Experiment/Roberta_CLIP_FNL_experiment/example_2.png)
-Ground Truth:
- In a dimly lit room, Susan clutched the cell phone tightly, her voice trembling over the line. She whispered anxiously, "Tom, something's wrong. I can't explain it, but I feel like we're running out of time." The indoor setting seemed to close in around her, amplifying the sense of urgency in the air.
 
 Prediction:
  In the thely,,, the the, the, the,, the,, the the., The,, the the the,, the the,, The,, the the, the the,, the,, the, the,,,,, the the, the the, his, the. of the. the.. The,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -488,16 +442,11 @@ In this stage (RoBERTa+CLIP FIN 2), I raised the learning rate and tuned batch s
 
 #### Example
 ![example_1](Experiment/Roberta_CLIP_FNL_2_experiment/example_1.png)
-Ground Truth:
- The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
 
 Prediction:
  In night was thick with tension as the the stood in the room of a room of. The air was a a was room of the old tension. his silent of the change the tension of the. The The,, the background, the,, his felt in the, his mind expression. mix of the. the. The air of was the  a, the,, the moment, he beginning of the of the. the..  he had at the,, his felt the his that was to the the sense. but that would change the. a..
 
 ![example_2](Experiment/Roberta_CLIP_FNL_2_experiment/example_2.png)
-
-Ground Truth:
- In a dimly lit room, Susan clutched the cell phone tightly, her voice trembling over the line. She whispered anxiously, "Tom, something's wrong. I can't explain it, but I feel like we're running out of time." The indoor setting seemed to close in around her, amplifying the sense of urgency in the air.
 
 Prediction:
  In the dimly lit room, John,ched the room,,, his eyes barely. the room of The had,,, hisWe, his was mind. The,'t shake the, his he he the a. a to of the. air room, to the in the him, hisifying the weight of the. the air. The, the,,,, the the the.......... the the the the the the the the the the the the the the the the the the the the the the the the the the the the
@@ -543,16 +492,12 @@ Overall, this experiment represents a shift from tuning training parameters to i
 
 #### Example
 ![example_1](Experiment/Roberta_CLIP_FNL_3_experiment/example_1.png)
-Ground Truth:
- The night was thick with tension as Officer Smith stood in the heart of the Military base. The air carried with it the weight of an impending decision, a decision that would alter the course of history. Officer Smith looked over the shoulder of Soldier John, who stood at attention, his military uniform a symbol of dedication and duty. The Officer thought, “How did it come to this? How did the line between us and them become so blurred?” As he glanced at Soldier John, he sighed, knowing he needed to make a choice, one that could either save or condemn many
 
 Prediction:
  In night was thick with tension as John Smith stood at the dim of the bustling.. The room was the a was events of the impending decision pressing and silent that could change the course of his. Smith felt at him air, the,, who stood near the, his mind a and stark of the. the. The air and about " We, little come to this moment The she she events beyond them them the...  she she took at the,, his felt, his that was to make. journey. but that he change make or the..
 
 
 ![example_2](Experiment/Roberta_CLIP_FNL_3_experiment/example_2.png)
-Ground Truth:
- In a dimly lit room, Susan clutched the cell phone tightly, her voice trembling over the line. She whispered anxiously, "Tom, something's wrong. I can't explain it, but I feel like we're running out of time." The indoor setting seemed to close in around her, amplifying the sense of urgency in the air.
 
 Prediction:
  In the dimly lit room with John stoodched a cell phone tightly, his eyes barely with the tension. The felt,iously, herWhat, the need not?" have't afford this?" a the was it a focus and out of a. weight setting with to whisper in, him, aifying the tension of une. the air.ly the the............................................
