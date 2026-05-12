@@ -1,4 +1,3 @@
-from skimage.data import cell
 
 # dnnls\_final\_project
 
@@ -12,7 +11,7 @@ This project is my final assessment for my Deep learning course at Sheffield Hal
 
 
 
-# CLIP 
+# MULTIMODAL SEQUENCE PREDICTION USING CLIP, RPBERTA AND GRU ATTENTION
 
 ## Quick links
 - **[Experiment Notebook](Experiment_Roberta+CLIP_FINAL.ipynb)** - Full Notebook experiment
