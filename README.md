@@ -521,84 +521,8 @@ After the previous experiments showed that performance improvements could not be
 
 On the **RoBERTa text autoencoder**, more transformer layers were unfrozen (from 4 → 6) to allow deeper task-specific adaptation. The LSTM hidden initialization was also improved by explicitly supporting multi-layer decoding through repeated latent states, which improves gradient flow and stabilizes sequence generation. In addition, a small MLP head was added to the decoder output along with weight tying between embedding and output layers, improving semantic consistency and reducing prediction noise.
 **[Roberta_autoencoder](src/Roberta_autoencoder.py)
-from 
-```python
-hidden = latent.unsqueeze(0)
-
-```
-to the modified
-```python
-hidden = latent.unsqueeze(0).repeat(2, 1, 1)
-```
-This allowed us to increase the number of layers in the LSTM decoder to 2.
-
-Next we look at the Encoder output change
-from
-```python
-return None, hidden, cell
-```
-to 
-```python
-return latent, hidden, cell
-```
-This allowed me to preserve the latent embedding explicitly
-
-Next the biggest change was the decoder improvement
-I added this
-```python
-self.head = nn.Sequential(
-    nn.Linear(hidden_dim, embedding_dim),
-    nn.GELU(),
-    nn.LayerNorm(embedding_dim)
-)
-```
-This was added to smoothing the LSTM outputs before classification, reduce noisy logits and improve word-level stability
-
-Lastly, I added weight tying
-```python
-self.out.weight = self.embedding.weight
-```
-Previously we had our model repeating words like "the" a lot and some other words so now this improves semantic consistency, better generalization and sets Embedding space = output prediction space
-
 
 On the **CLIP visual autoencoder**, the main change is a stronger projection head. Instead of a single linear mapping, CLIP features are passed through a deeper MLP (Linear → LayerNorm → GELU → Dropout → Linear), allowing the visual embeddings to be reshaped into a more expressive latent manifold. This is combined with partial unfreezing of CLIP vision layers, enabling mild dataset-specific adaptation while still preserving pretrained visual knowledge.
-
-Firstly we have the encoder difference of projection head complexity
-from
-```python
-self.projection = nn.Linear(hidden_dim, latent_dim)
-```
-to 
-```python
-self.projection = nn.Sequential(
-    nn.Linear(hidden_dim, 512),
-    nn.LayerNorm(512),
-    nn.GELU(),
-    nn.Dropout(dropout),
-    nn.Linear(512, latent_dim)
-)
-```
-We changed from single linear layer to Deep MLP, added LayerNorm, Gelu and Dropout and these transforms the CLIP features from fixed embedding space to learnable latent manifold, reduces linear bottleneck collapse and improve nonlinear separability of visual concepts
-
-Next we unfreeze layers
-```python
-unfreeze_layers=2
-for layer in self.clip.vision_model.encoder.layers[-unfreeze_layers:]:
-    
-```
-This was done allow partial CLIP fine-tuning
-
-Also we modified the autoencoder 
-from
-```python
-self.encoder = CLIPEncoderWrapper(latent_dim, output_w, output_h)
-```
-to 
-```python
-self.encoder = CLIPEncoderWrapper(latent_dim)
-```
-This ignores the spatial config arguments.
-
 Importantly, the decoder architecture remains unchanged, meaning all performance changes are driven by improvements in the **encoder and latent representation quality**, not decoding capacity.
 
 Overall, this experiment represents a shift from tuning training parameters to improving representation learning, with both encoders redesigned to produce a richer, more stable shared latent space for multimodal sequence prediction.
